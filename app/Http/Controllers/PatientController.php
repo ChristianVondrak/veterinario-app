@@ -27,6 +27,17 @@ class PatientController extends Controller
         return view('patients.create');
     }
 
+    public function show(Patient $patient): View
+    {
+        $patient->load([
+            'medicalRecords' => fn ($query) => $query->latest('evaluated_at'),
+        ]);
+
+        return view('patients.show', [
+            'patient' => $patient,
+        ]);
+    }
+
     public function store(StorePatientRequest $request): RedirectResponse
     {
         $data = $request->validated();

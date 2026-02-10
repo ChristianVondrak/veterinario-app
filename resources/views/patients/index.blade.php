@@ -74,6 +74,14 @@
                                             {{ $patient->birth_date ? $patient->birth_date->age . ' años' : '—' }}
                                         </td>
                                         <td class="py-4 text-right whitespace-nowrap">
+                                            <a href="{{ route('patients.show', $patient) }}"
+                                               class="inline-flex items-center px-3 py-2 rounded-lg text-sm font-semibold text-indigo-700 hover:bg-indigo-50 transition">
+                                                Ver Dashboard
+                                            </a>
+                                            <a href="{{ route('patients.medical-records.create', $patient) }}"
+                                               class="inline-flex items-center px-3 py-2 rounded-lg text-sm font-semibold text-teal-700 hover:bg-teal-50 transition">
+                                                Evaluación
+                                            </a>
                                             <a href="{{ route('patients.edit', $patient) }}"
                                                class="inline-flex items-center px-3 py-2 rounded-lg text-sm font-semibold text-slate-700 hover:text-teal-600 hover:bg-slate-50 transition">
                                                 Editar
