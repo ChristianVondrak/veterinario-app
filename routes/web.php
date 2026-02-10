@@ -31,6 +31,8 @@ Route::middleware('auth')->group(function () {
         ->name('patients.medical-records.create');
     Route::post('patients/{patient}/medical-records', [MedicalRecordController::class, 'store'])
         ->name('patients.medical-records.store');
+    Route::get('patients/{patient}/medical-records/{medical_record}', [MedicalRecordController::class, 'show'])
+        ->name('patients.medical-records.show');
 });
 
 require __DIR__.'/auth.php';

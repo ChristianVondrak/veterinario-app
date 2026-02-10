@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\MedicalRecord;
 use App\Models\Patient;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -14,6 +15,16 @@ class MedicalRecordController extends Controller
     {
         return view('medical_records.create', [
             'patient' => $patient,
+        ]);
+    }
+
+    public function show(Patient $patient, MedicalRecord $medical_record): View
+    {
+        abort_if($medical_record->patient_id !== $patient->id, 404);
+
+        return view('medical_records.show', [
+            'patient' => $patient,
+            'medical_record' => $medical_record,
         ]);
     }
 
