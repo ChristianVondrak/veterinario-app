@@ -24,7 +24,7 @@
 
         <!-- Email Address -->
         <div>
-            <x-input-label for="email" :value="__('Email')" />
+            <x-input-label for="email" value="Correo electrónico" />
             <x-text-input id="email" 
                 class="block mt-1 w-full" 
                 type="email" 

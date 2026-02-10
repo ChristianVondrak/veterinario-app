@@ -30,7 +30,7 @@
                     <div class="flex items-center gap-4">
                         @if (Route::has('login'))
                             @auth
-                                <a href="{{ url('/dashboard') }}" class="text-sm font-medium text-slate-600 hover:text-teal-600 transition">Dashboard</a>
+                                <a href="{{ url('/dashboard') }}" class="text-sm font-medium text-slate-600 hover:text-teal-600 transition">Panel</a>
                             @else
                                 <a href="{{ route('login') }}" class="text-sm font-medium text-slate-600 hover:text-teal-600 transition">Entrar</a>
                                 @if (Route::has('register'))

@@ -1,9 +1,9 @@
 <x-app-layout>
     <x-slot name="header">
         <h2 class="font-bold text-xl text-slate-900 leading-tight">
-            {{ __('Dashboard') }}
+            Panel
         </h2>
-        <p class="text-sm text-slate-500 mt-0.5">{{ __('Bienvenido a VetNutri AI') }}</p>
+        <p class="text-sm text-slate-500 mt-0.5">Bienvenido a VetNutri AI</p>
     </x-slot>
 
     <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">

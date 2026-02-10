@@ -15,10 +15,10 @@
                 <!-- Navigation Links -->
                 <div class="hidden space-x-8 sm:ms-10 sm:flex">
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
-                        {{ __('Dashboard') }}
+                        Panel
                     </x-nav-link>
                     <x-nav-link :href="route('patients.index')" :active="request()->routeIs('patients.*')">
-                        {{ __('Pacientes') }}
+                        Pacientes
                     </x-nav-link>
                 </div>
             </div>
@@ -37,7 +37,7 @@
 
                     <x-slot name="content">
                         <x-dropdown-link :href="route('profile.edit')">
-                            {{ __('Perfil') }}
+                            Perfil
                         </x-dropdown-link>
 
                         <form method="POST" action="{{ route('logout') }}">
@@ -45,7 +45,7 @@
                             <x-dropdown-link :href="route('logout')"
                                     onclick="event.preventDefault();
                                                 this.closest('form').submit();">
-                                {{ __('Cerrar sesión') }}
+                                Cerrar sesión
                             </x-dropdown-link>
                         </form>
                     </x-slot>
@@ -68,10 +68,10 @@
     <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden border-t border-slate-200">
         <div class="pt-4 pb-3 space-y-1 px-4">
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
-                {{ __('Dashboard') }}
+                Panel
             </x-responsive-nav-link>
             <x-responsive-nav-link :href="route('patients.index')" :active="request()->routeIs('patients.*')">
-                {{ __('Pacientes') }}
+                Pacientes
             </x-responsive-nav-link>
         </div>
 
@@ -82,14 +82,14 @@
             </div>
             <div class="space-y-1 px-4">
                 <x-responsive-nav-link :href="route('profile.edit')">
-                    {{ __('Perfil') }}
+                    Perfil
                 </x-responsive-nav-link>
                 <form method="POST" action="{{ route('logout') }}">
                     @csrf
                     <x-responsive-nav-link :href="route('logout')"
                             onclick="event.preventDefault();
                                         this.closest('form').submit();">
-                        {{ __('Cerrar sesión') }}
+                        Cerrar sesión
                     </x-responsive-nav-link>
                 </form>
             </div>
