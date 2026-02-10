@@ -25,7 +25,7 @@
         </div>
 
         <a href="{{ route('patients.create') }}"
-           class="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-sky-600 text-white font-semibold shadow-lg shadow-sky-500/30 hover:bg-sky-700 transition shrink-0">
+           class="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-teal-600 text-white font-semibold hover:bg-teal-700 transition shrink-0">
             Nuevo Paciente
         </a>
     </div>
