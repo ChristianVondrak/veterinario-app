@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DietGeneratorController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\MedicalRecordController;
 use App\Http\Controllers\PatientController;
@@ -33,6 +34,8 @@ Route::middleware('auth')->group(function () {
         ->name('patients.medical-records.store');
     Route::get('patients/{patient}/medical-records/{medical_record}', [MedicalRecordController::class, 'show'])
         ->name('patients.medical-records.show');
+    Route::post('/patients/{patient}/diet', [DietGeneratorController::class, 'store'])
+        ->name('patients.diet.store');
 });
 
 require __DIR__.'/auth.php';

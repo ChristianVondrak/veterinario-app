@@ -29,5 +29,10 @@ class Patient extends Model
     {
         return $this->hasMany(MedicalRecord::class);
     }
+
+    public function diets(): HasMany
+    {
+        return $this->hasMany(Diet::class);
+    }
 }
 

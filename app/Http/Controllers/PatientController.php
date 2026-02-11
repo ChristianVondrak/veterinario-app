@@ -31,6 +31,7 @@ class PatientController extends Controller
     {
         $patient->load([
             'medicalRecords' => fn ($query) => $query->latest('evaluated_at'),
+            'diets' => fn ($query) => $query->latest(),
         ]);
 
         return view('patients.show', [
