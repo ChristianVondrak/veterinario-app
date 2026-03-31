@@ -507,7 +507,7 @@ class DietCalculatorService
             // Omega-3: el aceite de salmón es una dosis fija clínica (5g/día) NO proporcional
             // al tamaño corporal. El SUL NRC absoluto es 2800 mg/día. No se escala por ratio
             // para evitar falsos positivos de EXCESO en pacientes pequeños o de bajo MER.
-            'Omega-3 EPA+DHA (mg)'  => 2800.0,
+            'Omega-3 EPA+DHA (mg)'  => 2800.0 * $ratio,
         ];
 
         foreach ($requirements as $label => $required) {
