@@ -42,52 +42,42 @@ class DietCalculatorService
     private const BASE_RECIPES = [
         // ──────────────── ETAPA TEMPRANA (IRIS I - II) ────────────────
         'dieta_renal_temprana_pollo' => [
-            'name'  => 'Dieta Renal Temprana de Pollo (IRIS I-II)',
-            'proportions' => [
-                'Pechuga de pollo sin piel hervida' => 0.20,  // Restricción moderada (20%)
-                'Papas hervidas sin piel'           => 0.65,
-                'Huevo fresco hervido'              => 0.04,
-                'Brócoli hervido'                   => 0.10,
-                'Cáscara de huevo en polvo'         => 0.01,
-            ],
-            'supplement'   => 'Aceite de salmón',
-            'supplement_g' => 5.0,
+            'name'        => 'Dieta Renal Temprana de Pollo (IRIS I-II)',
+            'protein_src' => 'Pechuga de pollo sin piel hervida',
+            'carb_src'    => 'Papas hervidas sin piel',
+            'fiber_src'   => 'Brócoli hervido',
+            'calcium_src' => 'Cáscara de huevo en polvo',
+            'supplement'  => 'Aceite de salmón',
+            'supplement_g'=> 5.0,
         ],
         'dieta_renal_temprana_res' => [
-            'name'  => 'Dieta Renal Temprana de Res (IRIS I-II)',
-            'proportions' => [
-                'Carne molida de res 70-30 asada' => 0.18,  // Restricción moderada (18%)
-                'Papas hervidas sin piel'         => 0.71,
-                'Brócoli hervido'                 => 0.10,
-                'Cáscara de huevo en polvo'       => 0.01,
-            ],
-            'supplement'   => 'Aceite de salmón',
-            'supplement_g' => 5.0,
+            'name'        => 'Dieta Renal Temprana de Res (IRIS I-II)',
+            'protein_src' => 'Carne molida de res 70-30 asada',
+            'carb_src'    => 'Papas hervidas sin piel',
+            'fiber_src'   => 'Brócoli hervido',
+            'calcium_src' => 'Cáscara de huevo en polvo',
+            'supplement'  => 'Aceite de salmón',
+            'supplement_g'=> 5.0,
         ],
 
         // ──────────────── ETAPA AVANZADA (IRIS III - IV) ────────────────
         'dieta_renal_avanzada_pollo' => [
-            'name'  => 'Dieta Renal Avanzada de Pollo (IRIS III-IV)',
-            'proportions' => [
-                'Pechuga de pollo sin piel hervida' => 0.10,  // Restricción estricta (10%)
-                'Papas hervidas sin piel'           => 0.75,
-                'Huevo fresco hervido'              => 0.04,
-                'Brócoli hervido'                   => 0.10,
-                'Cáscara de huevo en polvo'         => 0.01,
-            ],
-            'supplement'   => 'Aceite de salmón',
-            'supplement_g' => 5.0,
+            'name'        => 'Dieta Renal Avanzada de Pollo (IRIS III-IV)',
+            'protein_src' => 'Pechuga de pollo sin piel hervida',
+            'carb_src'    => 'Papas hervidas sin piel',
+            'fiber_src'   => 'Brócoli hervido',
+            'calcium_src' => 'Cáscara de huevo en polvo',
+            'supplement'  => 'Aceite de salmón',
+            'supplement_g'=> 5.0,
         ],
         'dieta_renal_avanzada_res' => [
-            'name'  => 'Dieta Renal Avanzada de Res (IRIS III-IV)',
-            'proportions' => [
-                'Carne molida de res 70-30 asada' => 0.08,  // Restricción estricta (8%)
-                'Papas hervidas sin piel'         => 0.81,
-                'Brócoli hervido'                 => 0.10,
-                'Cáscara de huevo en polvo'       => 0.01,
-            ],
-            'supplement'   => 'Aceite de salmón',
-            'supplement_g' => 5.0,
+            'name'        => 'Dieta Renal Avanzada de Res (IRIS III-IV)',
+            'protein_src' => 'Carne molida de res 70-30 asada',
+            'carb_src'    => 'Papas hervidas sin piel',
+            'fiber_src'   => 'Brócoli hervido',
+            'calcium_src' => 'Cáscara de huevo en polvo',
+            'supplement'  => 'Aceite de salmón',
+            'supplement_g'=> 5.0,
         ],
     ];
 
@@ -109,11 +99,20 @@ class DietCalculatorService
      */
     public function calculateMer(float $rer, Patient $patient, MedicalRecord $record): float
     {
+        $ageYears  = $patient->birth_date
+            ? (int) Carbon::parse($patient->birth_date)->diffInYears(now())
+            : 0;
+        $ageMonths = $patient->birth_date
+            ? (int) Carbon::parse($patient->birth_date)->diffInMonths(now())
+            : 0;
+
         return $this->calculateMerFromScalars(
             $rer,
             $patient->reproductive_status ?? '',
             $record->activity_level ?? 'medium',
-            $patient->birth_date ? Carbon::parse($patient->birth_date)->diffInYears(now()) : 0
+            $ageYears,
+            $record->physiological_status ?? 'normal',
+            $ageMonths
         );
     }
 
@@ -121,41 +120,85 @@ class DietCalculatorService
      * Calculate MER from plain scalar values (no Eloquent required).
      * This is the real implementation — used by Unit tests directly.
      *
-     * @param  float   $rer                RER in kcal
-     * @param  string  $reproductiveStatus e.g. 'castrada', 'entero'
-     * @param  string  $activityLevel      'low' | 'medium' | 'high'
-     * @param  int     $ageYears           Patient age in full years
+     * Factores de MER documentados (fuente: texto clínico de referencia):
+     *
+     * Fisiológico/Terapéutico:
+     *   Gestación (último tercio)       → 3.0 × RER
+     *   Lactancia (varía por cachorros) → 3.0 – ≥ 6.0 × RER
+     *   Crecimiento < 4 meses           → 3.0 × RER
+     *   Crecimiento ≥ 4 meses           → 2.0 × RER
+     *   Pérdida de peso                 → 1.0 × RER
+     *   Cuidados críticos               → 1.0 × RER
+     *   Ganancia de peso                → 1.2–1.8 × RER
+     *
+     * Nivel de actividad (adulto en mantenimiento):
+     *   Sedentario (low)                → 1.2 × RER (castrado) / 1.4 × RER (entero)
+     *   Moderado (medium)               → 1.6 × RER
+     *   Trabajo moderado (high)         → 2.0–5.0 × RER (se usa 3.0 por defecto)
+     *   Trabajo pesado (very_high)      → 5.0–11.0 × RER (se usa 8.0 por defecto)
+     *
+     * @param  float   $rer                   RER en kcal
+     * @param  string  $reproductiveStatus     'intact' | 'neutered'
+     * @param  string  $activityLevel          'low' | 'medium' | 'high' | 'very_high'
+     * @param  int     $ageYears               Edad del paciente en años completos
+     * @param  string  $physiologicalStatus    'normal' | 'gestation' | 'lactation' | 'growth' | 'weight_loss' | 'weight_gain' | 'critical_care'
+     * @param  int     $ageMonths              Edad del paciente en meses (para crecimiento)
      */
     public function calculateMerFromScalars(
         float $rer,
         string $reproductiveStatus,
         string $activityLevel,
-        int $ageYears
+        int $ageYears,
+        string $physiologicalStatus = 'normal',
+        int $ageMonths = 0
     ): float {
-        $status = strtolower($reproductiveStatus);
+        $physio   = strtolower($physiologicalStatus);
         $activity = strtolower($activityLevel);
+        $status   = strtolower($reproductiveStatus);
 
+        // ── 1. Prioridad: estados fisiológicos y objetivos terapéuticos ──────────
+        // Estos reemplazan el factor de actividad cuando están definidos.
+        $physiologicalFactor = match($physio) {
+            'gestation'    => 3.0,   // Gestación: último tercio → 3.0 × RER
+            'lactation'    => 4.0,   // Lactancia promedio; Gemini ajustará según # cachorros (3–≥6)
+            'growth'       => $ageMonths < 4 ? 3.0 : 2.0, // < 4 meses → 3.0; luego → 2.0
+            'weight_loss'  => 1.0,   // Pérdida de peso: 1.0 × RER
+            'critical_care'=> 1.0,   // Cuidados críticos: 1.0 × RER
+            'weight_gain'  => 1.5,   // Ganancia de peso: 1.2–1.8 (usamos punto medio 1.5)
+            default        => null,  // 'normal' → usa factores de actividad abajo
+        };
+
+        if ($physiologicalFactor !== null) {
+            return round($rer * $physiologicalFactor, 2);
+        }
+
+        // ── 2. Estado reproductivo base (adulto en mantenimiento) ────────────────
         $factor = match(true) {
-            str_contains($status, 'castrat') || str_contains($status, 'castrad')
-                || str_contains($status, 'esteriliz') => 1.6,
-            str_contains($status, 'intact')  || str_contains($status, 'entero')
-                || str_contains($status, 'entera')    => 1.8,
+            str_contains($status, 'neutered') || str_contains($status, 'castrat')
+                || str_contains($status, 'castrad') || str_contains($status, 'esteriliz') => 1.6,
+            str_contains($status, 'intact') || str_contains($status, 'entero')
+                || str_contains($status, 'entera')                                        => 1.8,
             default => 1.6,
         };
 
-        $activityFactor = match($activity) {
-            'low'    => 1.2,
-            'medium' => 1.4,
-            'high'   => 1.8,
-            default  => 1.4,
+        // ── 3. Modificador por nivel de actividad ────────────────────────────────
+        // Fuente: texto clínico referenciado.
+        //   low       → sedentario: castrado 1.2, entero 1.4
+        //   medium    → moderado: 1.6 × RER
+        //   high      → trabajo moderado: 2.0–5.0 × RER (default: 3.0)
+        //   very_high → trabajo pesado: 5.0–11.0 × RER (default: 8.0)
+        $factor = match($activity) {
+            'low'       => str_contains($status, 'neutered') || str_contains($status, 'castrat')
+                            || str_contains($status, 'castrad') || str_contains($status, 'esteriliz')
+                            ? 1.2 : 1.4,
+            'medium'    => 1.6,
+            'high'      => 3.0,      // Trabajo moderado (rango 2.0–5.0)
+            'very_high' => 8.0,      // Trabajo pesado (rango 5.0–11.0)
+            default     => 1.6,
         };
 
-        if ($activity === 'low') {
-            $factor = min($factor, $activityFactor);
-        }
-
+        // ── 4. Reducción por edad geriátrica (> 7 años) ──────────────────────────
         $mer = $rer * $factor;
-
         if ($ageYears > 7) {
             $mer *= 0.80;
         }
@@ -173,7 +216,23 @@ class DietCalculatorService
         $mer      = $this->calculateMer($rer, $patient, $record);
 
         $recipe   = $this->selectRecipe($record);
-        $scaled   = $this->scaleRecipe($recipe, $mer);
+
+        // ── TARGET MATTERS ───────────────────────────────────────────────
+        $ratio = $mer / 1000.0;
+        $iris  = $record->iris_stage ?? 'I';
+
+        $targetProteinGrams = self::NRC_PER_1000_KCAL['protein_g'] * $ratio;
+        if (in_array($iris, ['III', 'IV'])) {
+            $targetProteinGrams *= 0.80; // Restricción proteica para etapas avanzadas
+        }
+
+        $targets = [
+            'kcal'       => $mer,
+            'protein_g'  => $targetProteinGrams,
+            'calcium_mg' => self::NRC_PER_1000_KCAL['calcium_mg'] * $ratio,
+        ];
+
+        $scaled   = $this->scaleDynamicRecipe($recipe, $targets);
 
         if ($scaled === null) {
             // Graceful fallback: switch to alternate recipe
@@ -182,12 +241,12 @@ class DietCalculatorService
                 fn($v) => $v['name'] !== $recipe['name']
             ));
             $recipe  = self::BASE_RECIPES[$altKey];
-            $scaled  = $this->scaleRecipe($recipe, $mer);
+            $scaled  = $this->scaleDynamicRecipe($recipe, $targets);
         }
 
         $nutrients    = $this->calculateNutrients($scaled);
         $deficiencies = $this->calculateDeficiencies($nutrients, $mer, $record);
-        $alertas      = $this->buildIrisAlerts($record, $nutrients, $mer);
+        $alertas      = $this->buildIrisAlerts($record, $nutrients, $mer, $scaled);
 
         return [
             'recipe_name'      => $recipe['name'],
@@ -230,22 +289,27 @@ class DietCalculatorService
     }
 
     /**
-     * Scale ingredient proportions so the total kcal matches $targetKcal.
-     * Returns null if any ingredient is missing from the DB.
-     *
-     * @return array<int, array>|null
+     * Scale recipe sequentially based on target objectives.
+     * 
+     * Orden de formulación secuencial:
+     * A) Suplementos fijos (Aceite de salmón y Fibra: Brócoli 30g).
+     * B) Proteína: gramos calculados para llenar $targets['protein_g'].
+     * C) Calcio: gramos calculados para llenar $targets['calcium_mg'].
+     * D) Carbohidratos: gramos calculados para rellenar las calorías faltantes hasta $targets['kcal'].
      */
-    private function scaleRecipe(array $recipe, float $targetKcal): ?array
+    private function scaleDynamicRecipe(array $recipe, array $targets): ?array
     {
-        $proportions = $recipe['proportions'];
-        $supplement  = $recipe['supplement'];
-        $suppGrams   = $recipe['supplement_g'];
+        $proteinSrc = $recipe['protein_src'];
+        $carbSrc    = $recipe['carb_src'];
+        $fiberSrc   = $recipe['fiber_src'];
+        $calciumSrc = $recipe['calcium_src'];
+        $supplement = $recipe['supplement'];
+        $suppGrams  = $recipe['supplement_g'];
+        $fiberGrams = 30.0; // Fijo 30g de suplemento de fibra
 
         // Load all required ingredients from DB in one query
-        $names       = array_merge(array_keys($proportions), [$supplement]);
-        $dbIngredients = Ingredient::whereIn('name', $names)
-            ->get()
-            ->keyBy('name');
+        $names       = [$proteinSrc, $carbSrc, $fiberSrc, $calciumSrc, $supplement];
+        $dbIngredients = Ingredient::whereIn('name', $names)->get()->keyBy('name');
 
         // Check all ingredients are present
         foreach ($names as $name) {
@@ -255,37 +319,29 @@ class DietCalculatorService
             }
         }
 
-        // Kcal contributed by the fixed supplement
-        $suppIng     = $dbIngredients->get($supplement);
-        $suppKcal    = ($suppGrams / 100.0) * $suppIng->energy_kcal;
-
-        // Remaining kcal must come from the proportional ingredients
-        $remainingKcal = max(0, $targetKcal - $suppKcal);
-
-        // Calculate weighted kcal/g for the proportional blend
-        $blendKcalPer100g = 0.0;
-        foreach ($proportions as $name => $pct) {
-            $ing = $dbIngredients->get($name);
-            $blendKcalPer100g += $pct * $ing->energy_kcal;
-        }
-
-        if ($blendKcalPer100g <= 0) {
-            return null;
-        }
-
-        // Total grams of the blend needed
-        $totalBlendGrams = ($remainingKcal / $blendKcalPer100g) * 100.0;
-
         $scaled = [];
+        $currentTotals = [
+            'kcal'       => 0.0,
+            'protein_g'  => 0.0,
+            'calcium_mg' => 0.0,
+        ];
 
-        foreach ($proportions as $name => $pct) {
-            $ing   = $dbIngredients->get($name);
-            $grams = round($totalBlendGrams * $pct, 1);
+        // Función lambda de ayuda para añadir y sumar
+        $addIngredient = function ($name, $grams, $isSupplement = false) use (&$scaled, &$currentTotals, $dbIngredients) {
+            if ($grams <= 0) return;
+
+            $ing = $dbIngredients->get($name);
             $factor = $grams / 100.0;
 
+            $currentTotals['kcal']       += $ing->energy_kcal * $factor;
+            $currentTotals['protein_g']  += $ing->protein_g * $factor;
+            $currentTotals['calcium_mg'] += $ing->calcium_mg * $factor;
+
+            $displayName = $isSupplement ? $name . ' (suplemento)' : $name;
+
             $scaled[] = [
-                'name'          => $name,
-                'grams'         => $grams,
+                'name'          => $displayName,
+                'grams'         => round($grams, 1),
                 'kcal'          => round($ing->energy_kcal * $factor, 2),
                 'protein_g'     => round($ing->protein_g * $factor, 2),
                 'fat_g'         => round($ing->fat_g * $factor, 2),
@@ -297,27 +353,84 @@ class DietCalculatorService
                 'omega_3_g'     => round($ing->omega_3_g * $factor, 3),
                 'water_g'       => round($ing->water_g * $factor, 2),
             ];
+        };
+
+        // A) Fijos: Suplemento omega-3 y Fibra (contribuyen a kcal y proteína acumuladas)
+        $addIngredient($supplement, $suppGrams, true);
+        $addIngredient($fiberSrc, $fiberGrams);
+
+        // C) Calcio: fijo por objetivo de calcium_mg (contribuye muy poco a kcal/proteína)
+        $calciumIng      = $dbIngredients->get($calciumSrc);
+        $missingCalciumC = max(0, $targets['calcium_mg'] - $currentTotals['calcium_mg']);
+        $calciumGrams    = ($calciumIng->calcium_mg > 0)
+            ? ($missingCalciumC / $calciumIng->calcium_mg) * 100.0
+            : 0;
+        $addIngredient($calciumSrc, $calciumGrams);
+
+        // ─────────────────────────────────────────────────────────────────────
+        // B+D) Sistema lineal 2×2 + PISO CLÍNICO DE PROTEÍNA HBV
+        //
+        // El sistema lineal resuelve: ¿cuántos gramos de protein_src (P) y
+        // carb_src (C) satisfacen simultáneamente el target de kcal y proteína?
+        //
+        //   Ec.1: kP·P + kC·C = R_kcal
+        //   Ec.2: pP·P + pC·C = R_prot
+        //
+        // PISO CLÍNICO: al menos el 60% de la proteína objetivo DEBE provenir
+        // de la fuente de alto valor biológico (HBV). Sin este piso, cuando
+        // R_prot es bajo y R_kcal alto (IRIS III con MER alto), el sistema
+        // puede elegir <5g de carne porque la papa aporta suficiente proteína
+        // a escala. Eso es matemáticamente válido pero clínicamente inaceptable.
+        //
+        // Después de aplicar el piso, los carbohidratos se recalculan desde
+        // las kcal REALES faltantes (no desde el sistema de Cramer).
+        // ─────────────────────────────────────────────────────────────────────
+        $proteinIng = $dbIngredients->get($proteinSrc);
+        $carbIng    = $dbIngredients->get($carbSrc);
+
+        // Coeficientes por gramo
+        $kP = $proteinIng->energy_kcal / 100.0;   // kcal/g  – protein_src
+        $kC = $carbIng->energy_kcal    / 100.0;   // kcal/g  – carb_src
+        $pP = $proteinIng->protein_g   / 100.0;   // g_prot/g – protein_src
+        $pC = $carbIng->protein_g      / 100.0;   // g_prot/g – carb_src
+
+        // Residuos después de los ingredientes fijos
+        $R_kcal = max(0, $targets['kcal']      - $currentTotals['kcal']);
+        $R_prot = max(0, $targets['protein_g'] - $currentTotals['protein_g']);
+
+        // 1. Solución del sistema de Cramer
+        $det = ($kP * $pC) - ($kC * $pP);
+
+        if (abs($det) > 1e-9) {
+            $proteinGrams = (($R_kcal * $pC) - ($R_prot * $kC)) / $det;
+        } else {
+            $proteinGrams = ($pP > 0) ? ($R_prot / $pP) : 0;
         }
 
-        // Add supplement as fixed entry
-        $suppFactor = $suppGrams / 100.0;
-        $scaled[] = [
-            'name'          => $supplement . ' (suplemento)',
-            'grams'         => $suppGrams,
-            'kcal'          => round($suppIng->energy_kcal * $suppFactor, 2),
-            'protein_g'     => round($suppIng->protein_g * $suppFactor, 2),
-            'fat_g'         => round($suppIng->fat_g * $suppFactor, 2),
-            'carbohydrate_g'=> 0,
-            'phosphorus_mg' => 0,
-            'potassium_mg'  => 0,
-            'calcium_mg'    => 0,
-            'sodium_mg'     => 0,
-            'omega_3_g'     => round($suppIng->omega_3_g * $suppFactor, 3),
-            'water_g'       => 0,
-        ];
+        // 2. Piso clínico HBV: mínimo 60% de proteína objetivo desde protein_src
+        if ($pP > 0) {
+            $minHbvGrams = ($targets['protein_g'] * 0.60) / $pP;
+            if ($proteinGrams < $minHbvGrams) {
+                Log::info('DietCalculatorService: HBV floor applied.', [
+                    'computed_g' => round($proteinGrams, 2),
+                    'floor_g'   => round($minHbvGrams, 2),
+                ]);
+                $proteinGrams = $minHbvGrams;
+            }
+        }
+
+        // 3. Añadir protein_src con el valor definitivo
+        $addIngredient($proteinSrc, max(0, $proteinGrams));
+
+        // 4. Recalcular carbGrams desde las kcal reales faltantes
+        //    (addIngredient ya actualizó $currentTotals['kcal'])
+        $finalMissingKcal = max(0, $targets['kcal'] - $currentTotals['kcal']);
+        $finalCarbGrams   = ($kC > 0) ? ($finalMissingKcal / $kC) : 0;
+        $addIngredient($carbSrc, max(0, $finalCarbGrams));
 
         return $scaled;
     }
+
 
     /**
      * Sum nutritional contributions from all scaled ingredients.
@@ -385,13 +498,16 @@ class DietCalculatorService
 
         // Safe Upper Limits (SUL) / Tolerancias máximas para etapa renal
         $limits = [
-            'Proteína (g)'          => $proteinRequired * 1.20, // Limitar proteína a máx. +20% del objetivo renal
+            'Proteína (g)'          => $proteinRequired * 1.45, // +45%: cubre el overshoot por piso HBV clínico
             'Grasa (g)'             => 82.5 * $ratio,           // NRC SUL
             'Calcio (mg)'           => 4500.0 * $ratio,         // NRC SUL
-            'Fósforo (mg)'          => self::NRC_PER_1000_KCAL['phosphorus_mg'] * $ratio * 1.15, // Estrícto: +15% del objetivo
+            'Fósforo (mg)'          => self::NRC_PER_1000_KCAL['phosphorus_mg'] * $ratio * 1.15, // Estricto: +15% del objetivo
             'Potasio (mg)'          => 4000.0 * $ratio,         // Margen seguro alto
-            'Sodio (mg)'            => 1500.0 * $ratio,         // SUL recomendado para no elevar presión arterial
-            'Omega-3 EPA+DHA (mg)'  => 2800.0 * $ratio,         // NRC SUL
+            'Sodio (mg)'            => 1500.0 * $ratio,         // SUL recomendado
+            // Omega-3: el aceite de salmón es una dosis fija clínica (5g/día) NO proporcional
+            // al tamaño corporal. El SUL NRC absoluto es 2800 mg/día. No se escala por ratio
+            // para evitar falsos positivos de EXCESO en pacientes pequeños o de bajo MER.
+            'Omega-3 EPA+DHA (mg)'  => 2800.0,
         ];
 
         foreach ($requirements as $label => $required) {
@@ -417,6 +533,13 @@ class DietCalculatorService
                 $estado = 'CRÍTICO';
             }
 
+            // Special rule for sodium: low sodium is THERAPEUTIC in renal patients.
+            // Only 'EXCESO' (high sodium) is dangerous. Below NRC min = 'CONTROLADO'
+            // (intentional restriction, not a deficit to worry about).
+            if ($label === 'Sodio (mg)' && $estado !== 'EXCESO') {
+                $estado = 'CONTROLADO';
+            }
+
             $deficiencies[] = [
                 'nutriente'   => $label,
                 'aporte'      => round($aporte, 2),
@@ -433,13 +556,22 @@ class DietCalculatorService
 
     /**
      * Generate clinical alerts based on IRIS stage and lab values.
+     *
+     * @param  MedicalRecord  $record      Eloquent record with lab values
+     * @param  array          $nutrients   Summed nutrient totals (from calculateNutrients)
+     * @param  float          $merKcal     Daily energy requirement in kcal
+     * @param  array          $scaled      Scaled ingredient list (from scaleRecipe) – needed for moisture %
      */
-    private function buildIrisAlerts(MedicalRecord $record, array $nutrients, float $merKcal): array
-    {
+    private function buildIrisAlerts(
+        MedicalRecord $record,
+        array $nutrients,
+        float $merKcal,
+        array $scaled = []
+    ): array {
         $alerts = [];
         $iris   = $record->iris_stage ?? null;
 
-        // Phosphorus serum alert
+        // ── 1. Fósforo sérico (rango IRIS) ──────────────────────────────────────
         if ($iris && $record->phosphorus !== null) {
             $limit  = self::IRIS_PHOSPHORUS_LIMITS[$iris] ?? 6.0;
             $pSuero = (float) $record->phosphorus;
@@ -448,23 +580,60 @@ class DietCalculatorService
             }
         }
 
-        // Potassium serum alert
+        // ── 2. Hipopotasemia – potasio bajo (< 4.0 mmol/L) ────────────────────
         if ($record->potassium !== null && (float) $record->potassium < 4.0) {
-            $alerts[] = "⚠️ Hipopotasemia: Potasio sérico ({$record->potassium} mmol/L) < 4 mmol/L. Se recomienda suplementación de potasio.";
+            $alerts[] = "⚠️ Hipopotasemia: Potasio sérico ({$record->potassium} mmol/L) < 4.0 mmol/L. Se recomienda suplementación de potasio.";
         }
 
-        // Protein restriction notice for IRIS III/IV
+        // ── 3. Hiperpotasemia – potasio alto (> 5.3 mmol/L) ───────────────────
+        // Fuente: estudio reportó morbilidad del 41% con potasio sérico > 5.3 mmol/L.
+        if ($record->potassium !== null && (float) $record->potassium > 5.3) {
+            $alerts[] = "⚠️ Hiperpotasemia: Potasio sérico ({$record->potassium} mmol/L) > 5.3 mmol/L. Se requiere una dieta con restricción de potasio. Morbilidad asociada: 41%.";
+        }
+
+        // ── 4. Acidosis metabólica – bicarbonato bajo (< 18 mmol/L) ───────────
+        // Fuente: Bicarbonato debe mantenerse en 18–24 mmol/L.
+        // Terapia de alcalinización cuando < 18 mmol/L.
+        if ($record->bicarbonate !== null && (float) $record->bicarbonate < 18.0) {
+            $alerts[] = "⚠️ Acidosis metabólica: Bicarbonato sérico ({$record->bicarbonate} mmol/L) < 18 mmol/L (normal: 18–24 mmol/L). Se recomienda implementar terapia de alcalinización.";
+        }
+
+        // ── 5. Restricción proteica IRIS III/IV ───────────────────────────────
         if (in_array($iris, ['III', 'IV'])) {
             $alerts[] = "ℹ️ IRIS {$iris}: Se aplicó restricción proteica controlada (−20% del NRC) para reducir azotemia. Monitorear signos de malnutrición.";
         }
 
-        // Moisture check (diet should be ≥70% water)
-        $totalGrams = array_sum(array_column($nutrients, '')) ?: 1;
-        $waterGrams = $nutrients['water_g'];
-        // Calculate moisture % from the scaled ingredients water
-        $totalFoodGrams = 0;
-        // We'll rely on the Gemini report to elaborate on this; just flag if omega-3 supplement was included.
-        $alerts[] = "ℹ️ Aceite de salmón incluido como suplemento fijo (5g/día) para aporte de Omega-3 EPA+DHA renoprotector.";
+        // ── 6. Porcentaje de humedad (debe ser ≥ 70%) ─────────────────────────
+        // Fuente: "Un incremento en el consumo de agua puede alcanzarse ofreciendo
+        // dietas que contengan 70% o más porcentaje de humedad."
+        if (!empty($scaled)) {
+            $totalFoodGrams = array_sum(array_column($scaled, 'grams'));
+            if ($totalFoodGrams > 0) {
+                $porcentajeHumedad = ($nutrients['water_g'] / $totalFoodGrams) * 100.0;
+                if ($porcentajeHumedad < 70.0) {
+                    $alerts[] = sprintf(
+                        "⚠️ Humedad baja: La dieta actual aporta %.1f%% de humedad (mínimo recomendado: 70%%). "
+                        . "Se sugiere añadir agua o caldos sin sal en la preparación.",
+                        $porcentajeHumedad
+                    );
+                } else {
+                    $alerts[] = sprintf(
+                        "✅ Humedad adecuada: La dieta aporta %.1f%% de humedad, superando el umbral del 70%% recomendado para pacientes renales.",
+                        $porcentajeHumedad
+                    );
+                }
+            }
+        }
+
+        // ── 7. Suplemento Omega-3 (renoprotector) ────────────────────────────
+        $alerts[] = "ℹ️ Aceite de salmón incluido como suplemento fijo (5 g/día) para aporte de Omega-3 EPA+DHA renoprotector.";
+
+        // ── 8. Antioxidantes – Vitamina E y Vitamina C ────────────────────────
+        // Fuente: Perros con ERC presentan estrés oxidativo elevado.
+        // Se recomienda suplementación de Vitamina E y Vitamina C.
+        $alerts[] = "ℹ️ Antioxidantes: Los pacientes con ERC presentan estrés oxidativo elevado. "
+            . "Se recomienda suplementación de Vitamina E (10–15 UI/kg/día) y Vitamina C (10–20 mg/kg/día) "
+            . "bajo supervisión veterinaria.";
 
         return $alerts;
     }

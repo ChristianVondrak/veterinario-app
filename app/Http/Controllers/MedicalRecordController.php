@@ -40,12 +40,14 @@ class MedicalRecordController extends Controller
             'phosphorus' => ['nullable', 'numeric', 'min:0'],
             'potassium' => ['nullable', 'numeric', 'min:0'],
             'sodium' => ['nullable', 'numeric', 'min:0'],
+            'bicarbonate' => ['nullable', 'numeric', 'min:0', 'max:50'],
 
             'urine_density' => ['nullable', 'numeric', 'between:1,1.2'],
             'proteinuria' => ['required', Rule::in(['yes', 'no', 'unknown'])],
 
             'appetite' => ['required', Rule::in(['normal', 'decreased', 'none'])],
-            'activity_level' => ['required', Rule::in(['low', 'medium', 'high'])],
+            'activity_level' => ['required', Rule::in(['low', 'medium', 'high', 'very_high'])],
+            'physiological_status' => ['nullable', Rule::in(['normal', 'gestation', 'lactation', 'growth', 'weight_loss', 'weight_gain', 'critical_care'])],
 
             'special_considerations' => ['nullable', 'string'],
         ], [

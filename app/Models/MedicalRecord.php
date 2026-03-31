@@ -21,10 +21,12 @@ class MedicalRecord extends Model
         'phosphorus',
         'potassium',
         'sodium',
+        'bicarbonate',
         'urine_density',
         'proteinuria',
         'appetite',
         'activity_level',
+        'physiological_status',
         'special_considerations',
     ];
 

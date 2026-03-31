@@ -1,4 +1,5 @@
 <x-app-layout>
+    <x-slot name="title">Detalle de Evaluación</x-slot>
     <x-slot name="header">
         <h2 class="font-bold text-xl text-slate-900 leading-tight">
             Detalle de Evaluación — {{ $patient->name }}
@@ -20,7 +21,16 @@
             $r = $medical_record;
             $proteinuriaLabels = ['yes' => 'Sí', 'no' => 'No', 'unknown' => 'Desconocido'];
             $appetiteLabels = ['normal' => 'Normal', 'decreased' => 'Disminuido', 'none' => 'Nulo'];
-            $activityLabels = ['low' => 'Baja', 'medium' => 'Media', 'high' => 'Alta'];
+            $activityLabels = ['low' => 'Baja (Sedentario)', 'medium' => 'Media', 'high' => 'Alta (Trabajo mod.)', 'very_high' => 'Muy Alta (Pesado)'];
+            $physiologicalLabels = [
+                'normal' => 'Adulto Normal',
+                'gestation' => 'Gestación',
+                'lactation' => 'Lactancia',
+                'growth' => 'Crecimiento',
+                'weight_loss' => 'Pérdida de Peso',
+                'weight_gain' => 'Ganancia de Peso',
+                'critical_care' => 'Cuidados Críticos'
+            ];
         @endphp
 
         <div class="space-y-6">
@@ -74,6 +84,10 @@
                         <p class="text-xs uppercase tracking-wide text-slate-500 font-semibold">Sodio (mmol/L)</p>
                         <p class="text-slate-900 mt-1">{{ $r->sodium ?? '—' }}</p>
                     </div>
+                    <div>
+                        <p class="text-xs uppercase tracking-wide text-slate-500 font-semibold">Bicarbonato (mmol/L)</p>
+                        <p class="text-slate-900 mt-1">{{ $r->bicarbonate ?? '—' }}</p>
+                    </div>
                 </div>
             </div>
 
@@ -92,8 +106,12 @@
             </div>
 
             <div class="bg-white shadow-xl sm:rounded-2xl border border-slate-100 p-6 sm:p-8">
-                <h3 class="text-base font-semibold text-slate-900 mb-4">Sección E: Estado</h3>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <h3 class="text-base font-semibold text-slate-900 mb-4">Sección E: Estado Fisiológico y Clínico</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                    <div>
+                        <p class="text-xs uppercase tracking-wide text-slate-500 font-semibold">Estado Fisiológico</p>
+                        <p class="text-slate-900 mt-1">{{ $physiologicalLabels[$r->physiological_status ?? ''] ?? ($r->physiological_status ?? '—') }}</p>
+                    </div>
                     <div>
                         <p class="text-xs uppercase tracking-wide text-slate-500 font-semibold">Apetito</p>
                         <p class="text-slate-900 mt-1">{{ $appetiteLabels[$r->appetite ?? ''] ?? ($r->appetite ?? '—') }}</p>

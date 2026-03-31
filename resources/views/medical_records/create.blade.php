@@ -1,4 +1,5 @@
 <x-app-layout>
+    <x-slot name="title">Nueva Evaluación</x-slot>
     <x-slot name="header">
         <h2 class="font-bold text-xl text-slate-900 leading-tight">
             Nueva Evaluación para: {{ $patient->name }}
@@ -87,6 +88,11 @@
                         <x-text-input id="sodium" name="sodium" type="number" step="0.01" min="0" :value="old('sodium')" />
                         <x-input-error :messages="$errors->get('sodium')" />
                     </div>
+                    <div>
+                        <x-input-label for="bicarbonate" value="Bicarbonato (mmol/L)" />
+                        <x-text-input id="bicarbonate" name="bicarbonate" type="number" step="0.01" min="0" :value="old('bicarbonate')" />
+                        <x-input-error :messages="$errors->get('bicarbonate')" />
+                    </div>
                 </div>
             </div>
 
@@ -112,8 +118,23 @@
             </div>
 
             <div class="bg-white shadow-xl sm:rounded-2xl border border-slate-100 p-6 sm:p-8">
-                <h3 class="text-base font-semibold text-slate-900 mb-4">Sección E: Estado</h3>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <h3 class="text-base font-semibold text-slate-900 mb-4">Sección E: Estado Fisiológico y Clínico</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                    <div>
+                        <x-input-label for="physiological_status" value="Estado Fisiológico" />
+                        <select id="physiological_status" name="physiological_status" required
+                                class="block w-full rounded-lg border-slate-300 bg-white text-slate-900 shadow-sm focus:border-teal-500 focus:ring-teal-500 transition">
+                            <option value="normal" {{ old('physiological_status', 'normal') === 'normal' ? 'selected' : '' }}>Adulto Normal</option>
+                            <option value="gestation" {{ old('physiological_status') === 'gestation' ? 'selected' : '' }}>Gestación (Últ. tercio)</option>
+                            <option value="lactation" {{ old('physiological_status') === 'lactation' ? 'selected' : '' }}>Lactancia</option>
+                            <option value="growth" {{ old('physiological_status') === 'growth' ? 'selected' : '' }}>Crecimiento</option>
+                            <option value="weight_loss" {{ old('physiological_status') === 'weight_loss' ? 'selected' : '' }}>Pérdida de Peso</option>
+                            <option value="weight_gain" {{ old('physiological_status') === 'weight_gain' ? 'selected' : '' }}>Ganancia de Peso</option>
+                            <option value="critical_care" {{ old('physiological_status') === 'critical_care' ? 'selected' : '' }}>Cuidados Críticos</option>
+                        </select>
+                        <x-input-error :messages="$errors->get('physiological_status')" />
+                    </div>
+
                     <div>
                         <x-input-label for="appetite" value="Apetito" />
                         <select id="appetite" name="appetite" required
@@ -131,9 +152,10 @@
                         <select id="activity_level" name="activity_level" required
                                 class="block w-full rounded-lg border-slate-300 bg-white text-slate-900 shadow-sm focus:border-teal-500 focus:ring-teal-500 transition">
                             <option value="" disabled {{ old('activity_level') ? '' : 'selected' }}>Selecciona...</option>
-                            <option value="low" {{ old('activity_level') === 'low' ? 'selected' : '' }}>Baja</option>
+                            <option value="low" {{ old('activity_level') === 'low' ? 'selected' : '' }}>Baja (Sedentario)</option>
                             <option value="medium" {{ old('activity_level') === 'medium' ? 'selected' : '' }}>Media</option>
-                            <option value="high" {{ old('activity_level') === 'high' ? 'selected' : '' }}>Alta</option>
+                            <option value="high" {{ old('activity_level') === 'high' ? 'selected' : '' }}>Alta (Trabajo mod.)</option>
+                            <option value="very_high" {{ old('activity_level') === 'very_high' ? 'selected' : '' }}>Muy Alta (Pesado)</option>
                         </select>
                         <x-input-error :messages="$errors->get('activity_level')" />
                     </div>

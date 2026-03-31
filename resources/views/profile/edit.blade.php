@@ -1,4 +1,5 @@
 <x-app-layout>
+    <x-slot name="title">Perfil</x-slot>
     <x-slot name="header">
         <div>
             <h2 class="font-bold text-xl text-slate-900 leading-tight">
