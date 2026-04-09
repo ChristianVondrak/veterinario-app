@@ -12,17 +12,72 @@ class DietCalculatorService
 {
     // ─────────────────────────────────────────────────────────────
     // TABLE 15-5 – NRC Nutrient Requirements for Adult Dog Maintenance
-    // All values expressed per 1,000 kcal ME.
+    // Source: National Research Council (NRC), 2006.
+    // All values expressed per kg BW^0.75 (Metabolic Body Weight).
+    //
+    // Keys:
+    //   minimal     → Minimal Requirement (absolute floor)
+    //   recommended → Recommended Allowance (preferred target; null = use minimal)
+    //   sul_bw      → Safe Upper Limit per kg BW^0.75 (null = no explicit NRC limit)
+    //   unit        → native NRC unit for the raw values
+    //   label       → UI display label
     // ─────────────────────────────────────────────────────────────
-    private const NRC_PER_1000_KCAL = [
-        'protein_g'      => 25.0,    // g
-        'fat_g'          => 13.8,    // g
-        'calcium_mg'     => 1000.0,  // mg
-        'phosphorus_mg'  => 750.0,   // mg
-        'potassium_mg'   => 1000.0,  // mg
-        'sodium_mg'      => 200.0,   // mg
-        'omega_3_mg'     => 110.0,   // mg EPA+DHA (omega_3_g stored in g → convert)
+    private const NRC_TABLE_15_5 = [
+        'protein_g' => [
+            'minimal'     => 2.62,   // g / kg BW^0.75
+            'recommended' => 3.28,   // g / kg BW^0.75
+            'sul_bw'      => null,   // No explicit SUL in table
+            'unit'        => 'g',
+            'label'       => 'Proteína (g)',
+        ],
+        'fat_g' => [
+            'minimal'     => null,
+            'recommended' => 1.8,    // g / kg BW^0.75 (Recommended Allowance)
+            'sul_bw'      => 10.8,   // g / kg BW^0.75 (Safe Upper Limit)
+            'unit'        => 'g',
+            'label'       => 'Grasa (g)',
+        ],
+        'calcium_g' => [
+            'minimal'     => 0.059,  // g / kg BW^0.75
+            'recommended' => 0.13,   // g / kg BW^0.75
+            'sul_bw'      => null,
+            'unit'        => 'g',
+            'label'       => 'Calcio (mg)',
+        ],
+        'phosphorus_g' => [
+            'minimal'     => null,
+            'recommended' => 0.10,   // g / kg BW^0.75 (= Adequate Intake)
+            'sul_bw'      => null,
+            'unit'        => 'g',
+            'label'       => 'Fósforo (mg)',
+        ],
+        'potassium_g' => [
+            'minimal'     => null,
+            'recommended' => 0.14,   // g / kg BW^0.75 (= Adequate Intake)
+            'sul_bw'      => null,
+            'unit'        => 'g',
+            'label'       => 'Potasio (mg)',
+        ],
+        'sodium_mg' => [
+            'minimal'     => 9.85,   // mg / kg BW^0.75
+            'recommended' => 26.2,   // mg / kg BW^0.75
+            'sul_bw'      => null,   // Absolute SUL >15 g/day (not per BW)
+            'unit'        => 'mg',
+            'label'       => 'Sodio (mg)',
+        ],
+        'omega_3_g' => [
+            'minimal'     => null,
+            'recommended' => 0.03,   // g / kg BW^0.75 (EPA+DHA combined)
+            'sul_bw'      => 0.37,   // g / kg BW^0.75 (Safe Upper Limit)
+            'unit'        => 'g',
+            'label'       => 'Omega-3 EPA+DHA (mg)',
+        ],
     ];
+
+    // ─────────────────────────────────────────────────────────────
+    // Fixed daily supplement doses (grams)
+    // ─────────────────────────────────────────────────────────────
+    private const FIBER_FIXED_GRAMS = 30.0;
 
     // ─────────────────────────────────────────────────────────────
     // IRIS serum phosphorus limits (mg/dL)
@@ -36,7 +91,7 @@ class DietCalculatorService
 
     // ─────────────────────────────────────────────────────────────
     // Base Recipes  → ingredient name must match `ingredients.name`
-    // Proportions must sum to 1.0 (100 %).
+    // Used to map required roles (protein, carb, fiber, calcium, supplement).
     // 'supplement_g' is a fixed daily gram dose added on top.
     // ─────────────────────────────────────────────────────────────
     private const BASE_RECIPES = [
@@ -172,16 +227,7 @@ class DietCalculatorService
             return round($rer * $physiologicalFactor, 2);
         }
 
-        // ── 2. Estado reproductivo base (adulto en mantenimiento) ────────────────
-        $factor = match(true) {
-            str_contains($status, 'neutered') || str_contains($status, 'castrat')
-                || str_contains($status, 'castrad') || str_contains($status, 'esteriliz') => 1.6,
-            str_contains($status, 'intact') || str_contains($status, 'entero')
-                || str_contains($status, 'entera')                                        => 1.8,
-            default => 1.6,
-        };
-
-        // ── 3. Modificador por nivel de actividad ────────────────────────────────
+        // ── 2. Modificador por nivel de actividad & estado reproductivo ──────────
         // Fuente: texto clínico referenciado.
         //   low       → sedentario: castrado 1.2, entero 1.4
         //   medium    → moderado: 1.6 × RER
@@ -212,24 +258,35 @@ class DietCalculatorService
     public function buildCalculationPayload(Patient $patient, MedicalRecord $record): array
     {
         $weightKg = (float) $record->weight_kg;
+        if ($weightKg <= 0) {
+            throw new \InvalidArgumentException("DietCalculatorService: El peso del paciente debe ser mayor a 0.");
+        }
+
         $rer      = $this->calculateRer($weightKg);
         $mer      = $this->calculateMer($rer, $patient, $record);
 
         $recipe   = $this->selectRecipe($record);
 
-        // ── TARGET MATTERS ───────────────────────────────────────────────
-        $ratio = $mer / 1000.0;
-        $iris  = $record->iris_stage ?? 'I';
+        // ── METABOLIC BODY WEIGHT ────────────────────────────────────────
+        // BW^0.75 is the scaling factor used by NRC Table 15-5.
+        // All nutrient targets are expressed per kg BW^0.75.
+        $bwMetabolic = pow($weightKg, 0.75);
+        $iris        = $record->iris_stage ?? 'I';
 
-        $targetProteinGrams = self::NRC_PER_1000_KCAL['protein_g'] * $ratio;
+        // Protein target: Recommended Allowance × BW^0.75
+        // IRIS III/IV: −20% to reduce azotaemia burden on the kidney.
+        $targetProteinGrams = self::nrcValue('protein_g') * $bwMetabolic;
         if (in_array($iris, ['III', 'IV'])) {
             $targetProteinGrams *= 0.80; // Restricción proteica para etapas avanzadas
         }
 
+        // Calcium target: Recommended Allowance × BW^0.75 (g → mg)
+        $targetCalciumMg = self::nrcValue('calcium_g') * $bwMetabolic * 1000.0;
+
         $targets = [
             'kcal'       => $mer,
             'protein_g'  => $targetProteinGrams,
-            'calcium_mg' => self::NRC_PER_1000_KCAL['calcium_mg'] * $ratio,
+            'calcium_mg' => $targetCalciumMg,
         ];
 
         $scaled   = $this->scaleDynamicRecipe($recipe, $targets);
@@ -239,14 +296,18 @@ class DietCalculatorService
             $altKey  = array_key_first(array_filter(
                 self::BASE_RECIPES,
                 fn($v) => $v['name'] !== $recipe['name']
-            ));
+            )) ?? 'dieta_renal_temprana_pollo';
             $recipe  = self::BASE_RECIPES[$altKey];
             $scaled  = $this->scaleDynamicRecipe($recipe, $targets);
+
+            if ($scaled === null) {
+                throw new \RuntimeException("DietCalculatorService: Fallaron todos los intentos de formular la receta. Un ingrediente obligatorio puede estar ausente en la base de datos.");
+            }
         }
 
         $nutrients    = $this->calculateNutrients($scaled);
-        $deficiencies = $this->calculateDeficiencies($nutrients, $mer, $record);
-        $alertas      = $this->buildIrisAlerts($record, $nutrients, $mer, $scaled);
+        $deficiencies = $this->calculateDeficiencies($nutrients, $mer, $bwMetabolic, $record);
+        $alertas      = $this->buildIrisAlerts($record, $nutrients, $scaled);
 
         return [
             'recipe_name'      => $recipe['name'],
@@ -262,8 +323,6 @@ class DietCalculatorService
     // ─────────────────────────────────────────────────────────────
     // PRIVATE HELPERS
     // ─────────────────────────────────────────────────────────────
-
-    // merFactor() replaced by calculateMerFromScalars() above
 
     private function selectRecipe(MedicalRecord $record): array
     {
@@ -305,7 +364,7 @@ class DietCalculatorService
         $calciumSrc = $recipe['calcium_src'];
         $supplement = $recipe['supplement'];
         $suppGrams  = $recipe['supplement_g'];
-        $fiberGrams = 30.0; // Fijo 30g de suplemento de fibra
+        $fiberGrams = self::FIBER_FIXED_GRAMS; // Fijo 30g de suplemento de fibra
 
         // Load all required ingredients from DB in one query
         $names       = [$proteinSrc, $carbSrc, $fiberSrc, $calciumSrc, $supplement];
@@ -459,56 +518,118 @@ class DietCalculatorService
         return array_map(fn($v) => round($v, 2), $totals);
     }
 
-    /**
-     * Compare actual nutrient totals against NRC requirements
-     * and apply IRIS-specific adjustments.
-     */
-    private function calculateDeficiencies(array $nutrients, float $merKcal, MedicalRecord $record): array
-    {
-        $iris     = $record->iris_stage ?? 'I';
-        $ratio    = $merKcal / 1000.0;   // Scale NRC requirements to actual MER
+    // ─────────────────────────────────────────────────────────────
+    // NRC TABLE 15-5 HELPERS
+    // ─────────────────────────────────────────────────────────────
 
-        // Protein adjustment for advanced CKD (IRIS III/IV → −20% requirement)
-        $proteinRequired = self::NRC_PER_1000_KCAL['protein_g'] * $ratio;
+    /**
+     * Returns the best available NRC value for a nutrient key.
+     * Priority: Recommended Allowance → Minimal Requirement → 0.
+     */
+    private static function nrcValue(string $key): float
+    {
+        $entry = self::NRC_TABLE_15_5[$key];
+        return (float) ($entry['recommended'] ?? $entry['minimal'] ?? 0.0);
+    }
+
+    /**
+     * Returns a human-readable indicativo string for the results table.
+     *
+     * @param  string  $key         Key in NRC_TABLE_15_5
+     * @param  float   $multiplier  Unit conversion factor (e.g. 1000 to convert g → mg)
+     * @param  string  $displayUnit Override display unit after conversion (e.g. 'mg')
+     */
+    private static function nrcIndicativo(string $key, float $multiplier = 1.0, string $displayUnit = ''): string
+    {
+        $entry      = self::NRC_TABLE_15_5[$key];
+        $isRec      = isset($entry['recommended']);
+        $rawVal     = (float) ($isRec ? $entry['recommended'] : ($entry['minimal'] ?? 0.0));
+        $displayVal = $rawVal * $multiplier;
+        $unit       = $displayUnit ?: $entry['unit'];
+        $type       = $isRec ? 'Recomendado' : 'Mínimo';
+        $formatted  = ($displayVal == floor($displayVal)) ? (int) $displayVal : round($displayVal, 3);
+
+        return "{$formatted}{$unit} / kg BW\u{2070}\u{22C5}\u{2077}\u{2075} ({$type})";
+    }
+
+    /**
+     * Compare actual nutrient totals against NRC Table 15-5 requirements
+     * (expressed per kg BW^0.75) and apply IRIS-specific adjustments.
+     *
+     * @param  array          $nutrients    Summed nutrient totals (from calculateNutrients)
+     * @param  float          $merKcal      Daily energy requirement in kcal (used for SUL fallbacks)
+     * @param  float          $bwMetabolic  Metabolic body weight: BW(kg)^0.75
+     * @param  MedicalRecord  $record       Eloquent record with lab values and IRIS stage
+     */
+    private function calculateDeficiencies(
+        array $nutrients,
+        float $merKcal,
+        float $bwMetabolic,
+        MedicalRecord $record
+    ): array {
+        $iris  = $record->iris_stage ?? 'I';
+        $ratio = $merKcal / 1000.0;  // Kept only for SULs without a BW-based NRC value
+
+        // ── Protein: RA × BW^0.75; IRIS III/IV → −20% ───────────────────────
+        $proteinRequired = self::nrcValue('protein_g') * $bwMetabolic;
         if (in_array($iris, ['III', 'IV'])) {
             $proteinRequired *= 0.80;
         }
 
+        // ── Requirements (Recommended Allowance, fallback to Minimal) ────────
         $requirements = [
             'Proteína (g)'          => $proteinRequired,
-            'Grasa (g)'             => self::NRC_PER_1000_KCAL['fat_g'] * $ratio,
-            'Calcio (mg)'           => self::NRC_PER_1000_KCAL['calcium_mg'] * $ratio,
-            'Fósforo (mg)'          => self::NRC_PER_1000_KCAL['phosphorus_mg'] * $ratio,
-            'Potasio (mg)'          => self::NRC_PER_1000_KCAL['potassium_mg'] * $ratio,
-            'Sodio (mg)'            => self::NRC_PER_1000_KCAL['sodium_mg'] * $ratio,
-            'Omega-3 EPA+DHA (mg)'  => self::NRC_PER_1000_KCAL['omega_3_mg'] * $ratio,
+            'Grasa (g)'             => self::nrcValue('fat_g')        * $bwMetabolic,
+            'Calcio (mg)'           => self::nrcValue('calcium_g')    * $bwMetabolic * 1000.0,
+            'Fósforo (mg)'          => self::nrcValue('phosphorus_g') * $bwMetabolic * 1000.0,
+            'Potasio (mg)'          => self::nrcValue('potassium_g')  * $bwMetabolic * 1000.0,
+            'Sodio (mg)'            => self::nrcValue('sodium_mg')    * $bwMetabolic,
+            'Omega-3 EPA+DHA (mg)'  => self::nrcValue('omega_3_g')   * $bwMetabolic * 1000.0,
         ];
 
+        // ── Actual aporte from the scaled recipe ─────────────────────────────
         $actual = [
-            'Proteína (g)'         => $nutrients['protein_g'],
-            'Grasa (g)'            => $nutrients['fat_g'],
-            'Calcio (mg)'          => $nutrients['calcium_mg'],
-            'Fósforo (mg)'         => $nutrients['phosphorus_mg'],
-            'Potasio (mg)'         => $nutrients['potassium_mg'],
-            'Sodio (mg)'           => $nutrients['sodium_mg'],
-            'Omega-3 EPA+DHA (mg)' => round($nutrients['omega_3_g'] * 1000, 2),
+            'Proteína (g)'          => $nutrients['protein_g'],
+            'Grasa (g)'             => $nutrients['fat_g'],
+            'Calcio (mg)'           => $nutrients['calcium_mg'],
+            'Fósforo (mg)'          => $nutrients['phosphorus_mg'],
+            'Potasio (mg)'          => $nutrients['potassium_mg'],
+            'Sodio (mg)'            => $nutrients['sodium_mg'],
+            'Omega-3 EPA+DHA (mg)'  => round($nutrients['omega_3_g'] * 1000, 2),
+        ];
+
+        // ── Safe Upper Limits ─────────────────────────────────────────────────
+        // Where NRC provides sul_bw, use it × BW^0.75.
+        // Where no BW-based SUL exists, use conservative clinical fallbacks via $ratio.
+        $limits = [
+            // Protein: no explicit NRC SUL; allow HBV-floor overshoot (+45%)
+            'Proteína (g)'          => $proteinRequired * 1.45,
+            // Fat: NRC SUL = 10.8g / kg BW^0.75
+            'Grasa (g)'             => self::NRC_TABLE_15_5['fat_g']['sul_bw'] * $bwMetabolic,
+            // Calcium: no BW-based NRC SUL → clinical fallback
+            'Calcio (mg)'           => 4500.0 * $ratio,
+            // Phosphorus: no explicit SUL; allow +15% over RA
+            'Fósforo (mg)'          => self::nrcValue('phosphorus_g') * $bwMetabolic * 1000.0 * 1.15,
+            // Potassium: no BW-based NRC SUL → clinical fallback
+            'Potasio (mg)'          => 4000.0 * $ratio,
+            // Sodium: absolute NRC SUL >15 g/day; clinical fallback per ratio
+            'Sodio (mg)'            => 1500.0 * $ratio,
+            // Omega-3: NRC SUL = 0.37g / kg BW^0.75 → converted to mg
+            'Omega-3 EPA+DHA (mg)'  => self::NRC_TABLE_15_5['omega_3_g']['sul_bw'] * $bwMetabolic * 1000.0,
+        ];
+
+        // ── Indicativos NRC ───────────────────────────────────────────────────
+        $indicativos = [
+            'Proteína (g)'          => self::nrcIndicativo('protein_g'),
+            'Grasa (g)'             => self::nrcIndicativo('fat_g'),
+            'Calcio (mg)'           => self::nrcIndicativo('calcium_g',    1000.0, 'mg'),
+            'Fósforo (mg)'          => self::nrcIndicativo('phosphorus_g', 1000.0, 'mg'),
+            'Potasio (mg)'          => self::nrcIndicativo('potassium_g',  1000.0, 'mg'),
+            'Sodio (mg)'            => self::nrcIndicativo('sodium_mg'),
+            'Omega-3 EPA+DHA (mg)'  => self::nrcIndicativo('omega_3_g',   1000.0, 'mg'),
         ];
 
         $deficiencies = [];
-
-        // Safe Upper Limits (SUL) / Tolerancias máximas para etapa renal
-        $limits = [
-            'Proteína (g)'          => $proteinRequired * 1.45, // +45%: cubre el overshoot por piso HBV clínico
-            'Grasa (g)'             => 82.5 * $ratio,           // NRC SUL
-            'Calcio (mg)'           => 4500.0 * $ratio,         // NRC SUL
-            'Fósforo (mg)'          => self::NRC_PER_1000_KCAL['phosphorus_mg'] * $ratio * 1.15, // Estricto: +15% del objetivo
-            'Potasio (mg)'          => 4000.0 * $ratio,         // Margen seguro alto
-            'Sodio (mg)'            => 1500.0 * $ratio,         // SUL recomendado
-            // Omega-3: el aceite de salmón es una dosis fija clínica (5g/día) NO proporcional
-            // al tamaño corporal. El SUL NRC absoluto es 2800 mg/día. No se escala por ratio
-            // para evitar falsos positivos de EXCESO en pacientes pequeños o de bajo MER.
-            'Omega-3 EPA+DHA (mg)'  => 2800.0 * $ratio,
-        ];
 
         foreach ($requirements as $label => $required) {
             $aporte     = $actual[$label] ?? 0.0;
@@ -524,7 +645,7 @@ class DietCalculatorService
                 default      => 'CRÍTICO',
             };
 
-            // Special rule: potassium alert if serum < 4 mmol/L
+            // Hipopotasemia: forzar CRÍTICO si potasio sérico < 4.0 mmol/L
             if ($label === 'Potasio (mg)'
                 && $record->potassium !== null
                 && (float) $record->potassium < 4.0
@@ -533,15 +654,14 @@ class DietCalculatorService
                 $estado = 'CRÍTICO';
             }
 
-            // Special rule for sodium: low sodium is THERAPEUTIC in renal patients.
-            // Only 'EXCESO' (high sodium) is dangerous. Below NRC min = 'CONTROLADO'
-            // (intentional restriction, not a deficit to worry about).
+            // Sodio bajo en renales = restricción terapéutica → CONTROLADO
             if ($label === 'Sodio (mg)' && $estado !== 'EXCESO') {
                 $estado = 'CONTROLADO';
             }
 
             $deficiencies[] = [
                 'nutriente'   => $label,
+                'indicativo'  => $indicativos[$label] ?? '—',
                 'aporte'      => round($aporte, 2),
                 'requerido'   => round($required, 2),
                 'limite_max'  => round($limiteMax, 2),
@@ -559,13 +679,11 @@ class DietCalculatorService
      *
      * @param  MedicalRecord  $record      Eloquent record with lab values
      * @param  array          $nutrients   Summed nutrient totals (from calculateNutrients)
-     * @param  float          $merKcal     Daily energy requirement in kcal
      * @param  array          $scaled      Scaled ingredient list (from scaleRecipe) – needed for moisture %
      */
     private function buildIrisAlerts(
         MedicalRecord $record,
         array $nutrients,
-        float $merKcal,
         array $scaled = []
     ): array {
         $alerts = [];

@@ -21,20 +21,20 @@ class DietGeneratorController extends Controller
         $latestRecord = $patient->medicalRecords()->latest('evaluated_at')->first();
 
         if (! $latestRecord) {
-            return back()->with('error', 'El paciente no tiene ninguna evaluación médica. No se puede generar una dieta.');
+            return redirect()->route('patients.show', $patient)->with('error', 'El paciente no tiene ninguna evaluación médica. No se puede generar una dieta.');
         }
 
         // ── Validaciones Clínicas Indispensables (Anti-Null) ────────────────
         if (empty($latestRecord->weight_kg) || $latestRecord->weight_kg <= 0) {
-            return back()->with('error', 'Falta el peso del paciente en la evaluación. Es un dato matemático obligatorio para calcular las kilocalorías.');
+            return redirect()->route('patients.show', $patient)->with('error', 'Falta el peso del paciente en la evaluación. Es un dato matemático obligatorio para calcular las kilocalorías.');
         }
 
         if (empty($patient->birth_date)) {
-            return back()->with('error', 'Falta la fecha de nacimiento del paciente en su perfil. Es necesaria para ajustar el metabolismo por la edad.');
+            return redirect()->route('patients.show', $patient)->with('error', 'Falta la fecha de nacimiento del paciente en su perfil. Es necesaria para ajustar el metabolismo por la edad.');
         }
 
         if (empty($patient->reproductive_status)) {
-            return back()->with('error', 'Falta el estado reproductivo (castrado/entero) en el perfil del paciente. Afecta drásticamente el cálculo de calorías.');
+            return redirect()->route('patients.show', $patient)->with('error', 'Falta el estado reproductivo (castrado/entero) en el perfil del paciente. Afecta drásticamente el cálculo de calorías.');
         }
 
         // ── Step 1: PHP makes all the math ────────────────────────────────
@@ -42,7 +42,7 @@ class DietGeneratorController extends Controller
             $calculoMatematico = $this->calculator->buildCalculationPayload($patient, $latestRecord);
         } catch (\Throwable $e) {
             Log::error('DietCalculatorService error: ' . $e->getMessage(), ['exception' => $e]);
-            return back()->with('error', 'Error interno al calcular la dieta. Verifica que los ingredientes estén sembrados en la base de datos.');
+            return redirect()->route('patients.show', $patient)->with('error', 'Error interno al calcular la dieta. ' . $e->getMessage());
         }
 
         // ── Step 2: Gemini only writes the clinical report ─────────────────
@@ -58,7 +58,7 @@ class DietGeneratorController extends Controller
             $payload = json_decode($cleanResponse, true, 512, JSON_THROW_ON_ERROR);
 
             if (! is_array($payload)) {
-                return back()->with('error', 'La respuesta de IA no tiene un formato JSON válido.');
+                return redirect()->route('patients.show', $patient)->with('error', 'La respuesta de IA no tiene un formato JSON válido.');
             }
 
             // ── Step 3: Merge math data (source of truth) into the payload ─
@@ -86,7 +86,7 @@ class DietGeneratorController extends Controller
 
         } catch (\Throwable $e) {
             Log::error('DietGeneratorController Gemini error: ' . $e->getMessage(), ['exception' => $e]);
-            return back()->with('error', 'No se pudo generar el informe clínico con IA. Inténtalo nuevamente.');
+            return redirect()->route('patients.show', $patient)->with('error', 'No se pudo generar el informe clínico con IA. Inténtalo nuevamente.');
         }
     }
 

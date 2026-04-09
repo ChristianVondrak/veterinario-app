@@ -379,8 +379,8 @@
                                                     <thead class="bg-slate-50">
                                                         <tr class="text-xs font-bold uppercase tracking-wider text-slate-500">
                                                             <th class="py-2.5 px-4 text-left">Nutriente</th>
-                                                            <th class="py-2.5 px-4 text-right" title="Requerimiento mínimo">Mínimo</th>
-                                                            <th class="py-2.5 px-4 text-right" title="Límite máximo tolerado">Máximo</th>
+                                                            <th class="py-2.5 px-4 text-left" title="Regla base del NRC (National Research Council)">Indicativo NRC</th>
+                                                            <th class="py-2.5 px-4 text-right" title="Requerimiento ajustado a las kcal del paciente">Requerido</th>
                                                             <th class="py-2.5 px-4 text-right font-bold text-slate-700">Aporte</th>
                                                             <th class="py-2.5 px-4 text-center">Estado</th>
                                                         </tr>
@@ -390,8 +390,8 @@
                                                             @php $cls = $badgeColors[$d['estado']] ?? 'bg-slate-100 text-slate-600'; @endphp
                                                             <tr class="hover:bg-slate-50/50">
                                                                 <td class="py-2.5 px-4 text-slate-700 font-medium">{{ $d['nutriente'] }}</td>
+                                                                <td class="py-2.5 px-4 text-left text-slate-500">{{ $d['indicativo'] ?? '—' }}</td>
                                                                 <td class="py-2.5 px-4 text-right text-slate-500">{{ $d['requerido'] }}</td>
-                                                                <td class="py-2.5 px-4 text-right text-slate-500">{{ $d['limite_max'] ?? '—' }}</td>
                                                                 <td class="py-2.5 px-4 text-right text-slate-800 font-semibold">{{ $d['aporte'] }}</td>
                                                                 <td class="py-2.5 px-4 text-center">
                                                                     <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold {{ $cls }}">
