@@ -80,14 +80,16 @@ class PatientController extends Controller
         unset($data['age_years']);
 
         // Mantener especie como perro por defecto.
-        $data['species'] = 'dog';
+        $data['species']    = 'dog';
         $data['birth_date'] = Carbon::today()->subYears($ageYears);
 
-        $patient->update($data);
+        // Usamos fill+save para actualizar solo los campos del modelo
+        // sin afectar las relaciones (medical_records, diets).
+        $patient->fill($data)->save();
 
         return redirect()
-            ->route('patients.index')
-            ->with('status', 'Paciente actualizado correctamente.');
+            ->route('patients.show', $patient)
+            ->with('status', 'Datos del paciente actualizados correctamente.');
     }
 
     public function destroy(Patient $patient): RedirectResponse

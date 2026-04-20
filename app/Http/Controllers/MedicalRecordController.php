@@ -42,17 +42,18 @@ class MedicalRecordController extends Controller
             'sodium' => ['nullable', 'numeric', 'min:0'],
             'bicarbonate' => ['nullable', 'numeric', 'min:0', 'max:50'],
 
-            'urine_density' => ['nullable', 'numeric', 'between:1,1.2'],
+            'urine_density' => ['nullable', 'numeric', 'regex:/^1\.(0[0-9]{2}|100)$/'],
             'proteinuria' => ['required', Rule::in(['yes', 'no', 'unknown'])],
 
             'appetite' => ['required', Rule::in(['normal', 'decreased', 'none'])],
-            'activity_level' => ['required', Rule::in(['low', 'medium', 'high', 'very_high'])],
+            'activity_level' => ['required', Rule::in(['low', 'medium', 'high'])],
             'physiological_status' => ['nullable', Rule::in(['normal', 'gestation', 'lactation', 'growth', 'weight_loss', 'weight_gain', 'critical_care'])],
 
             'special_considerations' => ['nullable', 'string'],
         ], [
-            'bcs.between' => 'La condición corporal (BCS) debe estar entre 1 y 5.',
-            'urine_density.between' => 'La densidad urinaria debe estar entre 1.000 y 1.200.',
+            'bcs.between'          => 'La condición corporal (BCS) debe estar entre 1 y 5.',
+            'urine_density.regex'  => 'La densidad urinaria debe tener el formato exacto de 3 decimales (ej. 1.025) y estar entre 1.000 y 1.100.',
+            'activity_level.in'   => 'El nivel de actividad no es válido.',
         ]);
 
         $patient->medicalRecords()->create($validated);

@@ -9,7 +9,7 @@
         </p>
     </x-slot>
 
-    <div class="max-w-3xl mx-auto sm:px-6 lg:px-8">
+    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         @if (session('status'))
             <div class="mb-6 p-4 bg-teal-50 border border-teal-200 rounded-xl text-teal-800">
                 {{ session('status') }}
@@ -89,7 +89,8 @@
                         id="age_years"
                         name="age_years"
                         type="number"
-                        min="0"
+                        min="1"
+                        max="30"
                         step="1"
                         :value="old('age_years')"
                         required

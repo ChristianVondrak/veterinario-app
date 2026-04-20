@@ -61,7 +61,7 @@ class DietCalculatorService
         'sodium_mg' => [
             'minimal'     => 9.85,   // mg / kg BW^0.75
             'recommended' => 26.2,   // mg / kg BW^0.75
-            'sul_bw'      => null,   // Absolute SUL >15 g/day (not per BW)
+            'sul_bw'      => null,
             'unit'        => 'mg',
             'label'       => 'Sodio (mg)',
         ],
@@ -75,9 +75,17 @@ class DietCalculatorService
     ];
 
     // ─────────────────────────────────────────────────────────────
-    // Fixed daily supplement doses (grams)
+    // Densidad de omega-3 en el aceite de salmón (g omega-3 / g aceite)
+    // Fuente: seeder — 31.5g omega_3 por 100g aceite
     // ─────────────────────────────────────────────────────────────
-    private const FIBER_FIXED_GRAMS = 30.0;
+    private const SALMON_OIL_OMEGA3_PER_GRAM = 0.315;
+
+    // ─────────────────────────────────────────────────────────────
+    // Límite de ingesta diaria de alimento: 3% del peso corporal.
+    // Perros consumen ~2–3% de su peso en materia seca equivalente.
+    // Usamos 3% como techo máximo seguro (peso fresco total).
+    // ─────────────────────────────────────────────────────────────
+    private const MAX_FOOD_FRACTION = 0.03; // 3% BW
 
     // ─────────────────────────────────────────────────────────────
     // IRIS serum phosphorus limits (mg/dL)
@@ -91,8 +99,7 @@ class DietCalculatorService
 
     // ─────────────────────────────────────────────────────────────
     // Base Recipes  → ingredient name must match `ingredients.name`
-    // Used to map required roles (protein, carb, fiber, calcium, supplement).
-    // 'supplement_g' is a fixed daily gram dose added on top.
+    // 'supplement_g' ya no se usa como dosis fija — se calcula dinámicamente.
     // ─────────────────────────────────────────────────────────────
     private const BASE_RECIPES = [
         // ──────────────── ETAPA TEMPRANA (IRIS I - II) ────────────────
@@ -103,7 +110,6 @@ class DietCalculatorService
             'fiber_src'   => 'Brócoli hervido',
             'calcium_src' => 'Cáscara de huevo en polvo',
             'supplement'  => 'Aceite de salmón',
-            'supplement_g'=> 5.0,
         ],
         'dieta_renal_temprana_res' => [
             'name'        => 'Dieta Renal Temprana de Res (IRIS I-II)',
@@ -112,7 +118,6 @@ class DietCalculatorService
             'fiber_src'   => 'Brócoli hervido',
             'calcium_src' => 'Cáscara de huevo en polvo',
             'supplement'  => 'Aceite de salmón',
-            'supplement_g'=> 5.0,
         ],
 
         // ──────────────── ETAPA AVANZADA (IRIS III - IV) ────────────────
@@ -123,7 +128,6 @@ class DietCalculatorService
             'fiber_src'   => 'Brócoli hervido',
             'calcium_src' => 'Cáscara de huevo en polvo',
             'supplement'  => 'Aceite de salmón',
-            'supplement_g'=> 5.0,
         ],
         'dieta_renal_avanzada_res' => [
             'name'        => 'Dieta Renal Avanzada de Res (IRIS III-IV)',
@@ -132,7 +136,6 @@ class DietCalculatorService
             'fiber_src'   => 'Brócoli hervido',
             'calcium_src' => 'Cáscara de huevo en polvo',
             'supplement'  => 'Aceite de salmón',
-            'supplement_g'=> 5.0,
         ],
     ];
 
@@ -190,11 +193,10 @@ class DietCalculatorService
      *   Sedentario (low)                → 1.2 × RER (castrado) / 1.4 × RER (entero)
      *   Moderado (medium)               → 1.6 × RER
      *   Trabajo moderado (high)         → 2.0–5.0 × RER (se usa 3.0 por defecto)
-     *   Trabajo pesado (very_high)      → 5.0–11.0 × RER (se usa 8.0 por defecto)
      *
      * @param  float   $rer                   RER en kcal
      * @param  string  $reproductiveStatus     'intact' | 'neutered'
-     * @param  string  $activityLevel          'low' | 'medium' | 'high' | 'very_high'
+     * @param  string  $activityLevel          'low' | 'medium' | 'high'
      * @param  int     $ageYears               Edad del paciente en años completos
      * @param  string  $physiologicalStatus    'normal' | 'gestation' | 'lactation' | 'growth' | 'weight_loss' | 'weight_gain' | 'critical_care'
      * @param  int     $ageMonths              Edad del paciente en meses (para crecimiento)
@@ -228,18 +230,15 @@ class DietCalculatorService
         }
 
         // ── 2. Modificador por nivel de actividad & estado reproductivo ──────────
-        // Fuente: texto clínico referenciado.
-        //   low       → sedentario: castrado 1.2, entero 1.4
-        //   medium    → moderado: 1.6 × RER
-        //   high      → trabajo moderado: 2.0–5.0 × RER (default: 3.0)
-        //   very_high → trabajo pesado: 5.0–11.0 × RER (default: 8.0)
+        // Nota: 'very_high' se eliminó del formulario por seguridad clínica.
+        // Se mantiene como fallback interno al valor de 'high' por robustez.
         $factor = match($activity) {
             'low'       => str_contains($status, 'neutered') || str_contains($status, 'castrat')
                             || str_contains($status, 'castrad') || str_contains($status, 'esteriliz')
                             ? 1.2 : 1.4,
             'medium'    => 1.6,
             'high'      => 3.0,      // Trabajo moderado (rango 2.0–5.0)
-            'very_high' => 8.0,      // Trabajo pesado (rango 5.0–11.0)
+            'very_high' => 3.0,      // Fallback interno — no debe llegar desde el formulario
             default     => 1.6,
         };
 
@@ -268,28 +267,31 @@ class DietCalculatorService
         $recipe   = $this->selectRecipe($record);
 
         // ── METABOLIC BODY WEIGHT ────────────────────────────────────────
-        // BW^0.75 is the scaling factor used by NRC Table 15-5.
-        // All nutrient targets are expressed per kg BW^0.75.
         $bwMetabolic = pow($weightKg, 0.75);
         $iris        = $record->iris_stage ?? 'I';
 
         // Protein target: Recommended Allowance × BW^0.75
-        // IRIS III/IV: −20% to reduce azotaemia burden on the kidney.
+        // IRIS III/IV: −20% para reducir carga de azotemia en el riñón.
         $targetProteinGrams = self::nrcValue('protein_g') * $bwMetabolic;
         if (in_array($iris, ['III', 'IV'])) {
-            $targetProteinGrams *= 0.80; // Restricción proteica para etapas avanzadas
+            $targetProteinGrams *= 0.80;
         }
 
         // Calcium target: Recommended Allowance × BW^0.75 (g → mg)
         $targetCalciumMg = self::nrcValue('calcium_g') * $bwMetabolic * 1000.0;
 
+        // Omega-3 target: Recommended Allowance × BW^0.75 (g)
+        // La dosis de aceite de salmón se calcula desde este target.
+        $targetOmega3G = self::nrcValue('omega_3_g') * $bwMetabolic;
+
         $targets = [
-            'kcal'       => $mer,
-            'protein_g'  => $targetProteinGrams,
-            'calcium_mg' => $targetCalciumMg,
+            'kcal'        => $mer,
+            'protein_g'   => $targetProteinGrams,
+            'calcium_mg'  => $targetCalciumMg,
+            'omega_3_g'   => $targetOmega3G,
         ];
 
-        $scaled   = $this->scaleDynamicRecipe($recipe, $targets);
+        $scaled   = $this->scaleDynamicRecipe($recipe, $targets, $weightKg);
 
         if ($scaled === null) {
             // Graceful fallback: switch to alternate recipe
@@ -298,7 +300,7 @@ class DietCalculatorService
                 fn($v) => $v['name'] !== $recipe['name']
             )) ?? 'dieta_renal_temprana_pollo';
             $recipe  = self::BASE_RECIPES[$altKey];
-            $scaled  = $this->scaleDynamicRecipe($recipe, $targets);
+            $scaled  = $this->scaleDynamicRecipe($recipe, $targets, $weightKg);
 
             if ($scaled === null) {
                 throw new \RuntimeException("DietCalculatorService: Fallaron todos los intentos de formular la receta. Un ingrediente obligatorio puede estar ausente en la base de datos.");
@@ -327,50 +329,62 @@ class DietCalculatorService
     private function selectRecipe(MedicalRecord $record): array
     {
         $considerations = strtolower($record->special_considerations ?? '');
-        $irisStage      = $record->iris_stage ?? 'I'; // Default to early stage
+        $irisStage      = $record->iris_stage ?? 'I';
 
-        // 1. Detect allergies
-        $avoidChicken = str_contains($considerations, 'alergia a pollo')
-            || str_contains($considerations, 'sin pollo')
-            || str_contains($considerations, 'alergia pollo')
-            || str_contains($considerations, 'no pollo');
+        // Detectar alergia/intolerancia al pollo con múltiples variantes
+        $avoidChicken = (bool) preg_match(
+            '/alergi[ao]\s*(al?\s*)?pollo|sin\s*pollo|no\s*pollo|intolerancia\s*(al?\s*)?pollo|chicken/i',
+            $considerations
+        );
 
         $proteinSource = $avoidChicken ? 'res' : 'pollo';
 
-        // 2. Select Medical Stage
+        // Seleccionar etapa clínica
         $stage = in_array($irisStage, ['III', 'IV']) ? 'avanzada' : 'temprana';
 
-        // 3. Construct specific logic key
         $key = "dieta_renal_{$stage}_{$proteinSource}";
 
-        // Return matched recipe (fallback to pollo temprana if not found somehow)
         return self::BASE_RECIPES[$key] ?? self::BASE_RECIPES['dieta_renal_temprana_pollo'];
     }
 
     /**
      * Scale recipe sequentially based on target objectives.
-     * 
-     * Orden de formulación secuencial:
-     * A) Suplementos fijos (Aceite de salmón y Fibra: Brócoli 30g).
-     * B) Proteína: gramos calculados para llenar $targets['protein_g'].
-     * C) Calcio: gramos calculados para llenar $targets['calcium_mg'].
-     * D) Carbohidratos: gramos calculados para rellenar las calorías faltantes hasta $targets['kcal'].
+     *
+     * Cascada de formulación (orden clínico correcto):
+     * 1. Calcular dosis de Aceite de salmón desde target Omega-3 NRC.
+     * 2. Fibra fija (Brócoli 30g).
+     * 3. Calcio (Cáscara de huevo) según target calcium_mg.
+     * 4. Proteína (sistema lineal + piso HBV 60%).
+     * 5. Carbohidratos: rellenar kcal faltantes.
+     * 6. POST-CHECK: Potasio — reducir carbohidratos si excede 120% del requerimiento.
+     * 7. POST-CHECK: Cap de peso total al 3% del peso corporal (reescalado proporcional).
+     *
+     * @param  array  $recipe    Selected recipe definition
+     * @param  array  $targets   ['kcal', 'protein_g', 'calcium_mg', 'omega_3_g']
+     * @param  float  $weightKg  Patient weight in kg (for 3% BW cap)
      */
-    private function scaleDynamicRecipe(array $recipe, array $targets): ?array
+    private function scaleDynamicRecipe(array $recipe, array $targets, float $weightKg): ?array
     {
         $proteinSrc = $recipe['protein_src'];
         $carbSrc    = $recipe['carb_src'];
         $fiberSrc   = $recipe['fiber_src'];
         $calciumSrc = $recipe['calcium_src'];
         $supplement = $recipe['supplement'];
-        $suppGrams  = $recipe['supplement_g'];
-        $fiberGrams = self::FIBER_FIXED_GRAMS; // Fijo 30g de suplemento de fibra
+        $fiberGrams = 30.0; // Brócoli fijo 30g — fuente de fibra
 
-        // Load all required ingredients from DB in one query
-        $names       = [$proteinSrc, $carbSrc, $fiberSrc, $calciumSrc, $supplement];
+        // Calcular dosis de aceite de salmón desde target NRC de Omega-3
+        // Dosis = target_omega3_g / densidad_omega3_del_aceite (g/g)
+        // Cap: no superar el SUL de NRC (0.37 g/kg BW^0.75 ya escalado en $targets)
+        $bwMetabolic      = pow($weightKg, 0.75);
+        $omega3TargetG    = $targets['omega_3_g'] ?? (self::nrcValue('omega_3_g') * $bwMetabolic);
+        $omega3SulG       = self::NRC_TABLE_15_5['omega_3_g']['sul_bw'] * $bwMetabolic;
+        $omega3CappedG    = min($omega3TargetG, $omega3SulG);
+        $suppGrams        = $omega3CappedG / self::SALMON_OIL_OMEGA3_PER_GRAM;
+
+        // Cargar ingredientes de la BD en una única consulta
+        $names         = [$proteinSrc, $carbSrc, $fiberSrc, $calciumSrc, $supplement];
         $dbIngredients = Ingredient::whereIn('name', $names)->get()->keyBy('name');
 
-        // Check all ingredients are present
         foreach ($names as $name) {
             if (! $dbIngredients->has($name)) {
                 Log::warning("DietCalculatorService: ingredient not found in DB: {$name}");
@@ -380,45 +394,49 @@ class DietCalculatorService
 
         $scaled = [];
         $currentTotals = [
-            'kcal'       => 0.0,
-            'protein_g'  => 0.0,
-            'calcium_mg' => 0.0,
+            'kcal'        => 0.0,
+            'protein_g'   => 0.0,
+            'calcium_mg'  => 0.0,
+            'potassium_mg'=> 0.0,
         ];
 
-        // Función lambda de ayuda para añadir y sumar
+        // Lambda: añade ingrediente y acumula totales
         $addIngredient = function ($name, $grams, $isSupplement = false) use (&$scaled, &$currentTotals, $dbIngredients) {
             if ($grams <= 0) return;
 
-            $ing = $dbIngredients->get($name);
+            $ing    = $dbIngredients->get($name);
             $factor = $grams / 100.0;
 
-            $currentTotals['kcal']       += $ing->energy_kcal * $factor;
-            $currentTotals['protein_g']  += $ing->protein_g * $factor;
-            $currentTotals['calcium_mg'] += $ing->calcium_mg * $factor;
+            $currentTotals['kcal']         += $ing->energy_kcal   * $factor;
+            $currentTotals['protein_g']    += $ing->protein_g      * $factor;
+            $currentTotals['calcium_mg']   += $ing->calcium_mg     * $factor;
+            $currentTotals['potassium_mg'] += $ing->potassium_mg   * $factor;
 
             $displayName = $isSupplement ? $name . ' (suplemento)' : $name;
 
             $scaled[] = [
                 'name'          => $displayName,
                 'grams'         => round($grams, 1),
-                'kcal'          => round($ing->energy_kcal * $factor, 2),
-                'protein_g'     => round($ing->protein_g * $factor, 2),
-                'fat_g'         => round($ing->fat_g * $factor, 2),
+                'kcal'          => round($ing->energy_kcal   * $factor, 2),
+                'protein_g'     => round($ing->protein_g     * $factor, 2),
+                'fat_g'         => round($ing->fat_g         * $factor, 2),
                 'carbohydrate_g'=> round($ing->carbohydrate_g * $factor, 2),
-                'phosphorus_mg' => round($ing->phosphorus_mg * $factor, 2),
-                'potassium_mg'  => round($ing->potassium_mg * $factor, 2),
-                'calcium_mg'    => round($ing->calcium_mg * $factor, 2),
-                'sodium_mg'     => round($ing->sodium_mg * $factor, 2),
-                'omega_3_g'     => round($ing->omega_3_g * $factor, 3),
-                'water_g'       => round($ing->water_g * $factor, 2),
+                'phosphorus_mg' => round($ing->phosphorus_mg  * $factor, 2),
+                'potassium_mg'  => round($ing->potassium_mg   * $factor, 2),
+                'calcium_mg'    => round($ing->calcium_mg     * $factor, 2),
+                'sodium_mg'     => round($ing->sodium_mg      * $factor, 2),
+                'omega_3_g'     => round($ing->omega_3_g      * $factor, 3),
+                'water_g'       => round($ing->water_g        * $factor, 2),
             ];
         };
 
-        // A) Fijos: Suplemento omega-3 y Fibra (contribuyen a kcal y proteína acumuladas)
+        // ── PASO 1: Suplemento omega-3 (dosis calculada por NRC) ─────────────────
         $addIngredient($supplement, $suppGrams, true);
+
+        // ── PASO 2: Fibra fija (Brócoli 30g) ─────────────────────────────────────
         $addIngredient($fiberSrc, $fiberGrams);
 
-        // C) Calcio: fijo por objetivo de calcium_mg (contribuye muy poco a kcal/proteína)
+        // ── PASO 3: Calcio (Cáscara de huevo — satisface target calcium_mg) ──────
         $calciumIng      = $dbIngredients->get($calciumSrc);
         $missingCalciumC = max(0, $targets['calcium_mg'] - $currentTotals['calcium_mg']);
         $calciumGrams    = ($calciumIng->calcium_mg > 0)
@@ -426,38 +444,25 @@ class DietCalculatorService
             : 0;
         $addIngredient($calciumSrc, $calciumGrams);
 
-        // ─────────────────────────────────────────────────────────────────────
-        // B+D) Sistema lineal 2×2 + PISO CLÍNICO DE PROTEÍNA HBV
+        // ── PASO 4: Proteína (fuente HBV) + PASO 5: Carbohidratos ────────────────
         //
-        // El sistema lineal resuelve: ¿cuántos gramos de protein_src (P) y
-        // carb_src (C) satisfacen simultáneamente el target de kcal y proteína?
-        //
+        // Sistema lineal 2×2 (Cramer) para satisfacer simultáneamente kcal y proteína:
         //   Ec.1: kP·P + kC·C = R_kcal
         //   Ec.2: pP·P + pC·C = R_prot
         //
-        // PISO CLÍNICO: al menos el 60% de la proteína objetivo DEBE provenir
-        // de la fuente de alto valor biológico (HBV). Sin este piso, cuando
-        // R_prot es bajo y R_kcal alto (IRIS III con MER alto), el sistema
-        // puede elegir <5g de carne porque la papa aporta suficiente proteína
-        // a escala. Eso es matemáticamente válido pero clínicamente inaceptable.
-        //
-        // Después de aplicar el piso, los carbohidratos se recalculan desde
-        // las kcal REALES faltantes (no desde el sistema de Cramer).
-        // ─────────────────────────────────────────────────────────────────────
+        // PISO CLÍNICO HBV: mínimo 60% de proteína objetivo desde protein_src.
+        // ─────────────────────────────────────────────────────────────────────────
         $proteinIng = $dbIngredients->get($proteinSrc);
         $carbIng    = $dbIngredients->get($carbSrc);
 
-        // Coeficientes por gramo
-        $kP = $proteinIng->energy_kcal / 100.0;   // kcal/g  – protein_src
-        $kC = $carbIng->energy_kcal    / 100.0;   // kcal/g  – carb_src
-        $pP = $proteinIng->protein_g   / 100.0;   // g_prot/g – protein_src
-        $pC = $carbIng->protein_g      / 100.0;   // g_prot/g – carb_src
+        $kP = $proteinIng->energy_kcal / 100.0;
+        $kC = $carbIng->energy_kcal    / 100.0;
+        $pP = $proteinIng->protein_g   / 100.0;
+        $pC = $carbIng->protein_g      / 100.0;
 
-        // Residuos después de los ingredientes fijos
         $R_kcal = max(0, $targets['kcal']      - $currentTotals['kcal']);
         $R_prot = max(0, $targets['protein_g'] - $currentTotals['protein_g']);
 
-        // 1. Solución del sistema de Cramer
         $det = ($kP * $pC) - ($kC * $pP);
 
         if (abs($det) > 1e-9) {
@@ -466,7 +471,7 @@ class DietCalculatorService
             $proteinGrams = ($pP > 0) ? ($R_prot / $pP) : 0;
         }
 
-        // 2. Piso clínico HBV: mínimo 60% de proteína objetivo desde protein_src
+        // Piso HBV: mínimo 60% de proteína objetivo desde protein_src
         if ($pP > 0) {
             $minHbvGrams = ($targets['protein_g'] * 0.60) / $pP;
             if ($proteinGrams < $minHbvGrams) {
@@ -478,14 +483,93 @@ class DietCalculatorService
             }
         }
 
-        // 3. Añadir protein_src con el valor definitivo
         $addIngredient($proteinSrc, max(0, $proteinGrams));
 
-        // 4. Recalcular carbGrams desde las kcal reales faltantes
-        //    (addIngredient ya actualizó $currentTotals['kcal'])
+        // ── PASO 5: Carbohidratos (rellenar kcal faltantes) ──────────────────────
         $finalMissingKcal = max(0, $targets['kcal'] - $currentTotals['kcal']);
         $finalCarbGrams   = ($kC > 0) ? ($finalMissingKcal / $kC) : 0;
         $addIngredient($carbSrc, max(0, $finalCarbGrams));
+
+        // ── PASO 6: POST-CHECK Potasio ────────────────────────────────────────────
+        // Si el potasio total supera el 120% del requerimiento NRC, reducir papas
+        // hasta ajustarlo. El potasio de papas = 328mg/100g.
+        $potassiumRequired = self::nrcValue('potassium_g') * $bwMetabolic * 1000.0;
+        $potassiumLimit    = $potassiumRequired * 1.20;
+
+        if ($currentTotals['potassium_mg'] > $potassiumLimit) {
+            // Buscar el ingrediente carb en el array $scaled para ajustarlo
+            $excessK     = $currentTotals['potassium_mg'] - $potassiumLimit;
+            $carbIngData = $dbIngredients->get($carbSrc);
+            $kPerGram    = $carbIngData->potassium_mg / 100.0; // mg K por gramo de carb
+
+            if ($kPerGram > 0) {
+                $reduceGrams = $excessK / $kPerGram;
+
+                // Restar del último scaled[] que sea carbSrc
+                foreach (array_reverse(array_keys($scaled)) as $idx) {
+                    if ($scaled[$idx]['name'] === $carbSrc) {
+                        $oldGrams = $scaled[$idx]['grams'];
+                        $newGrams = max(0, $oldGrams - $reduceGrams);
+                        $diff     = $oldGrams - $newGrams;
+
+                        if ($diff > 0) {
+                            $factor = $diff / 100.0;
+                            // Actualizar el elemento
+                            $scaled[$idx]['grams']          = round($newGrams, 1);
+                            $scaled[$idx]['kcal']           = round($carbIngData->energy_kcal   * ($newGrams / 100.0), 2);
+                            $scaled[$idx]['protein_g']      = round($carbIngData->protein_g     * ($newGrams / 100.0), 2);
+                            $scaled[$idx]['fat_g']          = round($carbIngData->fat_g         * ($newGrams / 100.0), 2);
+                            $scaled[$idx]['carbohydrate_g'] = round($carbIngData->carbohydrate_g * ($newGrams / 100.0), 2);
+                            $scaled[$idx]['phosphorus_mg']  = round($carbIngData->phosphorus_mg  * ($newGrams / 100.0), 2);
+                            $scaled[$idx]['potassium_mg']   = round($carbIngData->potassium_mg   * ($newGrams / 100.0), 2);
+                            $scaled[$idx]['calcium_mg']     = round($carbIngData->calcium_mg     * ($newGrams / 100.0), 2);
+                            $scaled[$idx]['sodium_mg']      = round($carbIngData->sodium_mg      * ($newGrams / 100.0), 2);
+                            $scaled[$idx]['omega_3_g']      = round($carbIngData->omega_3_g      * ($newGrams / 100.0), 3);
+                            $scaled[$idx]['water_g']        = round($carbIngData->water_g        * ($newGrams / 100.0), 2);
+
+                            Log::info('DietCalculatorService: Potassium guard reduced carbs.', [
+                                'reduced_by_g' => round($diff, 1),
+                                'old_carb_g'   => $oldGrams,
+                                'new_carb_g'   => $newGrams,
+                            ]);
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+
+        // ── PASO 7: CAP DE PESO TOTAL — 3% del peso corporal ─────────────────────
+        // Los perros consumen un máximo de ~2–3% de su peso en alimento al día.
+        // Si el total supera este límite, reescalamos todos los ingredientes
+        // proporcionalmente para mantener el balance nutricional relativo.
+        $maxFoodGrams   = $weightKg * 1000.0 * self::MAX_FOOD_FRACTION;
+        $totalFoodGrams = array_sum(array_column($scaled, 'grams'));
+
+        if ($totalFoodGrams > $maxFoodGrams && $totalFoodGrams > 0) {
+            $scaleFactor = $maxFoodGrams / $totalFoodGrams;
+
+            Log::info('DietCalculatorService: 3% BW food cap applied.', [
+                'total_before_g' => round($totalFoodGrams, 1),
+                'max_allowed_g'  => round($maxFoodGrams, 1),
+                'scale_factor'   => round($scaleFactor, 4),
+            ]);
+
+            foreach ($scaled as &$item) {
+                $item['grams']          = round($item['grams']          * $scaleFactor, 1);
+                $item['kcal']           = round($item['kcal']           * $scaleFactor, 2);
+                $item['protein_g']      = round($item['protein_g']      * $scaleFactor, 2);
+                $item['fat_g']          = round($item['fat_g']          * $scaleFactor, 2);
+                $item['carbohydrate_g'] = round($item['carbohydrate_g'] * $scaleFactor, 2);
+                $item['phosphorus_mg']  = round($item['phosphorus_mg']  * $scaleFactor, 2);
+                $item['potassium_mg']   = round($item['potassium_mg']   * $scaleFactor, 2);
+                $item['calcium_mg']     = round($item['calcium_mg']     * $scaleFactor, 2);
+                $item['sodium_mg']      = round($item['sodium_mg']      * $scaleFactor, 2);
+                $item['omega_3_g']      = round($item['omega_3_g']      * $scaleFactor, 3);
+                $item['water_g']        = round($item['water_g']        * $scaleFactor, 2);
+            }
+            unset($item);
+        }
 
         return $scaled;
     }
@@ -599,22 +683,14 @@ class DietCalculatorService
         ];
 
         // ── Safe Upper Limits ─────────────────────────────────────────────────
-        // Where NRC provides sul_bw, use it × BW^0.75.
-        // Where no BW-based SUL exists, use conservative clinical fallbacks via $ratio.
         $limits = [
-            // Protein: no explicit NRC SUL; allow HBV-floor overshoot (+45%)
             'Proteína (g)'          => $proteinRequired * 1.45,
-            // Fat: NRC SUL = 10.8g / kg BW^0.75
             'Grasa (g)'             => self::NRC_TABLE_15_5['fat_g']['sul_bw'] * $bwMetabolic,
-            // Calcium: no BW-based NRC SUL → clinical fallback
             'Calcio (mg)'           => 4500.0 * $ratio,
-            // Phosphorus: no explicit SUL; allow +15% over RA
             'Fósforo (mg)'          => self::nrcValue('phosphorus_g') * $bwMetabolic * 1000.0 * 1.15,
-            // Potassium: no BW-based NRC SUL → clinical fallback
             'Potasio (mg)'          => 4000.0 * $ratio,
-            // Sodium: absolute NRC SUL >15 g/day; clinical fallback per ratio
+            // Sodio: SUL real NRC > 15g/día; usamos fallback clínico conservador
             'Sodio (mg)'            => 1500.0 * $ratio,
-            // Omega-3: NRC SUL = 0.37g / kg BW^0.75 → converted to mg
             'Omega-3 EPA+DHA (mg)'  => self::NRC_TABLE_15_5['omega_3_g']['sul_bw'] * $bwMetabolic * 1000.0,
         ];
 
@@ -652,11 +728,6 @@ class DietCalculatorService
                 && $estado !== 'EXCESO'
             ) {
                 $estado = 'CRÍTICO';
-            }
-
-            // Sodio bajo en renales = restricción terapéutica → CONTROLADO
-            if ($label === 'Sodio (mg)' && $estado !== 'EXCESO') {
-                $estado = 'CONTROLADO';
             }
 
             $deficiencies[] = [
@@ -704,14 +775,11 @@ class DietCalculatorService
         }
 
         // ── 3. Hiperpotasemia – potasio alto (> 5.3 mmol/L) ───────────────────
-        // Fuente: estudio reportó morbilidad del 41% con potasio sérico > 5.3 mmol/L.
         if ($record->potassium !== null && (float) $record->potassium > 5.3) {
             $alerts[] = "⚠️ Hiperpotasemia: Potasio sérico ({$record->potassium} mmol/L) > 5.3 mmol/L. Se requiere una dieta con restricción de potasio. Morbilidad asociada: 41%.";
         }
 
         // ── 4. Acidosis metabólica – bicarbonato bajo (< 18 mmol/L) ───────────
-        // Fuente: Bicarbonato debe mantenerse en 18–24 mmol/L.
-        // Terapia de alcalinización cuando < 18 mmol/L.
         if ($record->bicarbonate !== null && (float) $record->bicarbonate < 18.0) {
             $alerts[] = "⚠️ Acidosis metabólica: Bicarbonato sérico ({$record->bicarbonate} mmol/L) < 18 mmol/L (normal: 18–24 mmol/L). Se recomienda implementar terapia de alcalinización.";
         }
@@ -722,8 +790,6 @@ class DietCalculatorService
         }
 
         // ── 6. Porcentaje de humedad (debe ser ≥ 70%) ─────────────────────────
-        // Fuente: "Un incremento en el consumo de agua puede alcanzarse ofreciendo
-        // dietas que contengan 70% o más porcentaje de humedad."
         if (!empty($scaled)) {
             $totalFoodGrams = array_sum(array_column($scaled, 'grams'));
             if ($totalFoodGrams > 0) {
@@ -743,15 +809,8 @@ class DietCalculatorService
             }
         }
 
-        // ── 7. Suplemento Omega-3 (renoprotector) ────────────────────────────
-        $alerts[] = "ℹ️ Aceite de salmón incluido como suplemento fijo (5 g/día) para aporte de Omega-3 EPA+DHA renoprotector.";
-
-        // ── 8. Antioxidantes – Vitamina E y Vitamina C ────────────────────────
-        // Fuente: Perros con ERC presentan estrés oxidativo elevado.
-        // Se recomienda suplementación de Vitamina E y Vitamina C.
-        $alerts[] = "ℹ️ Antioxidantes: Los pacientes con ERC presentan estrés oxidativo elevado. "
-            . "Se recomienda suplementación de Vitamina E (10–15 UI/kg/día) y Vitamina C (10–20 mg/kg/día) "
-            . "bajo supervisión veterinaria.";
+        // ── 7. Omega-3 calculado por peso (no fijo) ────────────────────────────
+        $alerts[] = "ℹ️ Aceite de salmón incluido como suplemento calculado por peso metabólico (NRC Omega-3 EPA+DHA recomendado) para aporte renoprotector ajustado al paciente.";
 
         return $alerts;
     }

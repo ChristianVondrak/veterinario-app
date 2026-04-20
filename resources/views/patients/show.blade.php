@@ -91,7 +91,7 @@
         $ageYears = $patient->birth_date ? $patient->birth_date->age : null;
     @endphp
 
-    <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
         @if (session('status'))
             <div class="px-4 py-3 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 text-sm font-medium">
                 {{ session('status') }}
@@ -119,7 +119,14 @@
                 <div>
                     <p class="text-xs uppercase tracking-wide text-slate-500 font-semibold">Especie / Raza</p>
                     <p class="text-base text-slate-900 mt-1">
-                        {{ ucfirst($patient->species) }} / {{ $patient->breed ?? 'No especificada' }}
+                        @php
+                            $especieLabel = match(strtolower($patient->species)) {
+                                'dog' => 'Canino',
+                                'cat' => 'Felino',
+                                default => ucfirst($patient->species),
+                            };
+                        @endphp
+                        {{ $especieLabel }} / {{ $patient->breed ?? 'No especificada' }}
                     </p>
                 </div>
 
@@ -152,7 +159,63 @@
                         <p class="text-sm text-slate-500 mt-1">Crea la primera evaluación para iniciar el seguimiento.</p>
                     </div>
                 @else
-                    <div class="overflow-x-auto">
+                    {{-- VISTA MÓVIL (Tarjetas) --}}
+                    <ul class="divide-y divide-slate-100 sm:hidden">
+                        @foreach ($records as $record)
+                            @php
+                                $irisBadge = match ($record->iris_stage) {
+                                    'I' => 'bg-emerald-100 text-emerald-700',
+                                    'II' => 'bg-amber-100 text-amber-700',
+                                    'III' => 'bg-orange-100 text-orange-700',
+                                    'IV' => 'bg-red-100 text-red-700',
+                                    default => 'bg-slate-100 text-slate-600',
+                                };
+                                $creatinineHigh = $record->creatinine !== null && (float) $record->creatinine >= 1.4;
+                                $bunHigh = $record->bun !== null && (float) $record->bun >= 30;
+                                $phosphorusHigh = $record->phosphorus !== null && (float) $record->phosphorus >= 5.0;
+                            @endphp
+                            <li class="py-4">
+                                <div class="flex items-center justify-between mb-3 border-b border-slate-50 pb-3">
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center shrink-0">
+                                            <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm font-semibold text-slate-900">{{ optional($record->evaluated_at)->format('d/m/Y') ?? '—' }}</p>
+                                        </div>
+                                    </div>
+                                    <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold {{ $irisBadge }}">
+                                        {{ $record->iris_stage ?? '—' }}
+                                    </span>
+                                </div>
+                                <div class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm text-slate-700 mb-4 px-1">
+                                    <div>
+                                        <span class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Peso</span>
+                                        {{ $record->weight_kg ?? '—' }}
+                                    </div>
+                                    <div>
+                                        <span class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Creatinina</span>
+                                        <span class="{{ $creatinineHigh ? 'text-red-700 font-semibold' : '' }}">{{ $record->creatinine ?? '—' }}</span>
+                                    </div>
+                                    <div>
+                                        <span class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Urea (BUN)</span>
+                                        <span class="{{ $bunHigh ? 'text-red-700 font-semibold' : '' }}">{{ $record->bun ?? '—' }}</span>
+                                    </div>
+                                    <div>
+                                        <span class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Fósforo</span>
+                                        <span class="{{ $phosphorusHigh ? 'text-red-700 font-semibold' : '' }}">{{ $record->phosphorus ?? '—' }}</span>
+                                    </div>
+                                </div>
+                                <a href="{{ route('patients.medical-records.show', [$patient, $record]) }}" class="flex items-center justify-center w-full py-2 bg-slate-50 hover:bg-slate-100 text-teal-700 text-sm font-medium rounded-lg transition gap-1.5 border border-slate-100">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                                    Ver Detalle
+                                </a>
+                            </li>
+                        @endforeach
+                    </ul>
+
+                    {{-- VISTA DESKTOP (Tabla) --}}
+                    <div class="hidden sm:block overflow-x-auto">
                         <table class="min-w-full divide-y divide-slate-100">
                             <thead>
                                 <tr class="text-left text-xs font-bold uppercase tracking-wider text-slate-500">
@@ -162,7 +225,7 @@
                                     <th class="py-3 pr-4">Creatinina</th>
                                     <th class="py-3 pr-4">Urea/BUN</th>
                                     <th class="py-3 pr-4">Fósforo</th>
-                                    <th class="py-3 text-right">Acciones</th>
+                                    <th class="py-3 text-right">Otros</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100">
@@ -285,7 +348,12 @@
                                             {{ $i + 1 }}
                                         </span>
                                         <div class="min-w-0">
-                                            <p class="text-sm font-semibold text-slate-900 truncate">{{ $diet->summary }}</p>
+                                            @php
+                                                $dietTitle = ($recipe ?? 'Dieta Renal')
+                                                    . ' — '
+                                                    . ($diet->created_at?->format('d/m/Y') ?? '');
+                                            @endphp
+                                            <p class="text-sm font-semibold text-slate-900 truncate">{{ $dietTitle }}</p>
                                             <p class="text-xs text-slate-500 mt-0.5 flex flex-wrap items-center gap-2">
                                                 <span>{{ $diet->created_at?->format('d/m/Y H:i') }}</span>
                                                 @if ($recipe)

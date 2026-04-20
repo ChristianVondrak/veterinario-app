@@ -44,7 +44,7 @@
                 <div class="text-center lg:text-left z-10">
                     <div class="inline-flex items-center px-3 py-1 rounded-full border border-teal-100 bg-teal-50 text-teal-700 text-sm font-medium mb-6">
                         <span class="flex h-2 w-2 rounded-full bg-teal-500 mr-2 animate-pulse"></span>
-                        Tecnología IRIS & AI Integrada
+                        Clasificación IRIS &amp; Nutrición Clínica
                     </div>
                     <h1 class="text-4xl lg:text-5xl xl:text-6xl font-extrabold text-slate-900 tracking-tight mb-6 leading-tight">
                         Nutrición Clínica <br/>
@@ -58,7 +58,7 @@
                             Comenzar Ahora
                         </a>
                         <a href="#features" class="px-8 py-3 rounded-lg bg-white border border-slate-200 text-slate-700 font-semibold hover:bg-slate-50 transition text-center">
-                            Ver Demo
+                            Ver Funcionalidades
                         </a>
                     </div>
                 </div>
@@ -151,7 +151,7 @@
                 </p>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto">
                 <div class="bg-white rounded-2xl p-8 shadow-sm hover:shadow-md transition border border-slate-100">
                     <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-6">
                         <svg class="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -159,28 +159,17 @@
                         </svg>
                     </div>
                     <h3 class="text-xl font-bold text-slate-900 mb-3">Historial Clínico Renal</h3>
-                    <p class="text-slate-500">Registro detallado de valores séricos (Fósforo, Potasio, Sodio) y clasificación automática del estadio IRIS.</p>
+                    <p class="text-slate-500">Registro detallado de valores séricos (Fósforo, Potasio, Sodio) con seguimiento completo del estadio IRIS definido por el veterinario.</p>
                 </div>
 
                 <div class="bg-white rounded-2xl p-8 shadow-lg ring-1 ring-teal-500/20 relative overflow-hidden">
-                    <div class="absolute top-0 right-0 bg-teal-500 text-white text-xs px-2 py-1 rounded-bl-lg font-bold">IA Powered</div>
                     <div class="w-12 h-12 bg-teal-100 rounded-xl flex items-center justify-center mb-6">
                         <svg class="w-6 h-6 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
                         </svg>
                     </div>
-                    <h3 class="text-xl font-bold text-slate-900 mb-3">Generador de Dietas IA</h3>
-                    <p class="text-slate-500">Algoritmos que calculan Kcal y macronutrientes al instante. Recalcula excluyendo ingredientes en segundos.</p>
-                </div>
-
-                <div class="bg-white rounded-2xl p-8 shadow-sm hover:shadow-md transition border border-slate-100">
-                    <div class="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center mb-6">
-                        <svg class="w-6 h-6 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                        </svg>
-                    </div>
-                    <h3 class="text-xl font-bold text-slate-900 mb-3">Exportación PDF</h3>
-                    <p class="text-slate-500">Entrega planes nutricionales claros y profesionales listos para imprimir o enviar por correo.</p>
+                    <h3 class="text-xl font-bold text-slate-900 mb-3">Generador de Dietas Renales</h3>
+                    <p class="text-slate-500">Algoritmos clínicos que calculan Kcal y macronutrientes basados en NRC. Ajuste automático según el estadio IRIS y las características del paciente.</p>
                 </div>
             </div>
         </div>

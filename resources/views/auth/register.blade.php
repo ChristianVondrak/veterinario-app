@@ -1,8 +1,6 @@
 <x-guest-layout>
-    @php
-        $title = 'Crear Cuenta';
-        $subtitle = 'Comienza a usar VetNutri AI';
-    @endphp
+    <x-slot name="title">Crea tu cuenta</x-slot>
+    <x-slot name="subtitle">Comienza a usar VetNutri AI</x-slot>
 
     <form method="POST" action="{{ route('register') }}" class="space-y-6">
         @csrf

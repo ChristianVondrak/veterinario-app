@@ -9,7 +9,7 @@
         </p>
     </x-slot>
 
-    <div class="max-w-3xl mx-auto sm:px-6 lg:px-8">
+    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="mb-6">
             <a href="{{ route('patients.index') }}"
                class="text-sm font-semibold text-teal-600 hover:text-teal-700 transition">
@@ -88,7 +88,8 @@
                         id="age_years"
                         name="age_years"
                         type="number"
-                        min="0"
+                        min="1"
+                        max="30"
                         step="1"
                         :value="old('age_years', $ageYears)"
                         required
@@ -103,17 +104,6 @@
                     <x-primary-button>
                         Guardar cambios
                     </x-primary-button>
-
-                    <form method="POST"
-                          action="{{ route('patients.destroy', $patient) }}"
-                          onsubmit="return confirm('¿Eliminar este paciente?');">
-                        @csrf
-                        @method('DELETE')
-                        <button type="submit"
-                                class="inline-flex items-center px-4 py-3 rounded-lg text-sm font-semibold text-red-600 hover:bg-red-50 transition">
-                            Eliminar
-                        </button>
-                    </form>
                 </div>
             </form>
         </div>

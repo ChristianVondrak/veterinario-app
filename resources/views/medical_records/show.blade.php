@@ -9,7 +9,7 @@
         </p>
     </x-slot>
 
-    <div class="max-w-5xl mx-auto sm:px-6 lg:px-8">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="mb-6">
             <a href="{{ route('patients.show', $patient) }}"
                class="text-sm font-semibold text-teal-600 hover:text-teal-700 transition">

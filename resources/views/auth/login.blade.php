@@ -1,8 +1,6 @@
 <x-guest-layout>
-    @php
-        $title = 'Iniciar Sesión';
-        $subtitle = 'Accede a tu cuenta de VetNutri AI';
-    @endphp
+    <x-slot name="title">Iniciar Sesión</x-slot>
+    <x-slot name="subtitle">Accede a tu cuenta de VetNutri AI</x-slot>
 
     <!-- Session Status -->
     <x-auth-session-status class="mb-6 p-4 bg-teal-50 border border-teal-200 rounded-lg text-teal-800" :status="session('status')" />

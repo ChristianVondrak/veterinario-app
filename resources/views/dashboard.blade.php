@@ -7,7 +7,7 @@
         <p class="text-sm text-slate-500 mt-0.5">Bienvenido a VetNutri AI</p>
     </x-slot>
 
-    <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
         <livewire:dashboard.search-patients />
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -23,7 +23,48 @@
                         @if($criticalPatients->isEmpty())
                             <p class="text-slate-500 text-sm py-4">No hay pacientes en estadio crítico.</p>
                         @else
-                            <div class="overflow-x-auto">
+                            {{-- VISTA MÓVIL (Tarjetas) --}}
+                            <ul class="divide-y divide-slate-100 sm:hidden">
+                                @foreach($criticalPatients as $patient)
+                                    @php
+                                        $last = $patient->medicalRecords->first();
+                                        $irisBadge = $last?->iris_stage === 'IV' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700';
+                                    @endphp
+                                    <li class="p-4">
+                                        <div class="flex items-start justify-between mb-2">
+                                            <div class="min-w-0">
+                                                <p class="font-semibold text-slate-900 truncate">{{ $patient->name }}</p>
+                                                <p class="text-xs text-slate-500">{{ $patient->breed ?? 'Sin raza' }}</p>
+                                            </div>
+                                            <span class="inline-flex shrink-0 items-center px-2 py-0.5 rounded-full text-[11px] font-semibold tracking-wide {{ $irisBadge }}">
+                                                IRIS {{ $last?->iris_stage ?? '—' }}
+                                            </span>
+                                        </div>
+                                        
+                                        <div class="grid grid-cols-2 gap-3 mb-3 text-sm border-t border-slate-50 pt-2 text-slate-700">
+                                            <div>
+                                                <span class="text-xs font-medium text-slate-400 block">Creatinina</span>
+                                                {{ $last?->creatinine ?? '—' }} mg/dL
+                                            </div>
+                                            <div>
+                                                <span class="text-xs font-medium text-slate-400 block">Urea (BUN)</span>
+                                                {{ $last?->bun ?? '—' }} mg/dL
+                                            </div>
+                                        </div>
+
+                                        <a href="{{ route('patients.show', $patient) }}" class="flex items-center justify-center w-full py-2 bg-slate-50 hover:bg-slate-100 text-sky-700 text-sm font-medium rounded-lg transition gap-1.5 border border-slate-100">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                            </svg>
+                                            Ir al Paciente
+                                        </a>
+                                    </li>
+                                @endforeach
+                            </ul>
+
+                            {{-- VISTA DESKTOP (Tabla) --}}
+                            <div class="hidden sm:block overflow-x-auto">
                                 <table class="min-w-full text-sm">
                                     <thead>
                                         <tr class="text-left text-xs font-semibold uppercase tracking-wider text-slate-500 border-b border-slate-100">
@@ -31,7 +72,8 @@
                                             <th class="pb-3 pr-4">Raza</th>
                                             <th class="pb-3 pr-4">IRIS</th>
                                             <th class="pb-3 pr-4">Creatinina</th>
-                                            <th class="pb-3">Urea</th>
+                                            <th class="pb-3 pr-4">Urea</th>
+                                            <th class="pb-3">Ver</th>
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y divide-slate-100">
@@ -42,7 +84,7 @@
                                             @endphp
                                             <tr class="hover:bg-slate-50/60 transition">
                                                 <td class="py-3 pr-4 font-medium text-slate-900">
-                                                    <a href="{{ route('patients.show', $patient) }}" class="hover:text-sky-600">{{ $patient->name }}</a>
+                                                    {{ $patient->name }}
                                                 </td>
                                                 <td class="py-3 pr-4 text-slate-600">{{ $patient->breed ?? '—' }}</td>
                                                 <td class="py-3 pr-4">
@@ -51,7 +93,17 @@
                                                     </span>
                                                 </td>
                                                 <td class="py-3 pr-4 text-slate-700">{{ $last?->creatinine ?? '—' }}</td>
-                                                <td class="py-3 text-slate-700">{{ $last?->bun ?? '—' }}</td>
+                                                <td class="py-3 pr-4 text-slate-700">{{ $last?->bun ?? '—' }}</td>
+                                                <td class="py-3">
+                                                    <a href="{{ route('patients.show', $patient) }}"
+                                                       class="inline-flex items-center justify-center p-2 rounded-lg text-slate-600 hover:text-sky-600 hover:bg-slate-50 transition"
+                                                       title="Ver paciente">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                        </svg>
+                                                    </a>
+                                                </td>
                                             </tr>
                                         @endforeach
                                     </tbody>
@@ -82,6 +134,9 @@
                                         <div class="min-w-0 flex-1">
                                             <p class="font-medium text-slate-900">
                                                 {{ $record->patient?->name ?? 'Paciente' }}
+                                                @if($record->patient?->breed)
+                                                    <span class="text-slate-400 font-normal text-xs"> · {{ $record->patient->breed }}</span>
+                                                @endif
                                                 <span class="text-slate-500 font-normal">— {{ $record->evaluated_at?->format('d/m/Y') ?? '—' }}</span>
                                             </p>
                                             <p class="text-sm text-slate-600 mt-0.5">

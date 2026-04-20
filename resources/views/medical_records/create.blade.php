@@ -9,7 +9,7 @@
         </p>
     </x-slot>
 
-    <div class="max-w-5xl mx-auto sm:px-6 lg:px-8">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="mb-6">
             <a href="{{ route('patients.index') }}"
                class="text-sm font-semibold text-teal-600 hover:text-teal-700 transition">
@@ -64,27 +64,27 @@
                 <h3 class="text-base font-semibold text-slate-900 mb-4">Sección C: Laboratorio Renal</h3>
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     <div>
-                        <x-input-label for="creatinine" value="Creatinina" />
+                        <x-input-label for="creatinine" value="Creatinina (mg/dL)" />
                         <x-text-input id="creatinine" name="creatinine" type="number" step="0.01" min="0" :value="old('creatinine')" />
                         <x-input-error :messages="$errors->get('creatinine')" />
                     </div>
                     <div>
-                        <x-input-label for="bun" value="Urea (BUN)" />
+                        <x-input-label for="bun" value="Urea / BUN (mg/dL)" />
                         <x-text-input id="bun" name="bun" type="number" step="0.01" min="0" :value="old('bun')" />
                         <x-input-error :messages="$errors->get('bun')" />
                     </div>
                     <div>
-                        <x-input-label for="phosphorus" value="Fósforo" />
+                        <x-input-label for="phosphorus" value="Fósforo (mg/dL)" />
                         <x-text-input id="phosphorus" name="phosphorus" type="number" step="0.01" min="0" :value="old('phosphorus')" />
                         <x-input-error :messages="$errors->get('phosphorus')" />
                     </div>
                     <div>
-                        <x-input-label for="potassium" value="Potasio" />
+                        <x-input-label for="potassium" value="Potasio (mmol/L)" />
                         <x-text-input id="potassium" name="potassium" type="number" step="0.01" min="0" :value="old('potassium')" />
                         <x-input-error :messages="$errors->get('potassium')" />
                     </div>
                     <div>
-                        <x-input-label for="sodium" value="Sodio" />
+                        <x-input-label for="sodium" value="Sodio (mmol/L)" />
                         <x-text-input id="sodium" name="sodium" type="number" step="0.01" min="0" :value="old('sodium')" />
                         <x-input-error :messages="$errors->get('sodium')" />
                     </div>
@@ -100,8 +100,9 @@
                 <h3 class="text-base font-semibold text-slate-900 mb-4">Sección D: Urianálisis</h3>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <div>
-                        <x-input-label for="urine_density" value="Densidad Urinaria" />
-                        <x-text-input id="urine_density" name="urine_density" type="number" step="0.001" min="1" max="1.2" :value="old('urine_density')" />
+                        <x-input-label for="urine_density" value="Densidad Urinaria (1.000–1.100)" />
+                        <x-text-input id="urine_density" name="urine_density" type="text" :value="old('urine_density')" placeholder="Ej: 1.025" />
+                        <p class="mt-1 text-xs text-slate-500">Rango válido: 1.000 a 1.100</p>
                         <x-input-error :messages="$errors->get('urine_density')" />
                     </div>
                     <div>
@@ -155,7 +156,6 @@
                             <option value="low" {{ old('activity_level') === 'low' ? 'selected' : '' }}>Baja (Sedentario)</option>
                             <option value="medium" {{ old('activity_level') === 'medium' ? 'selected' : '' }}>Media</option>
                             <option value="high" {{ old('activity_level') === 'high' ? 'selected' : '' }}>Alta (Trabajo mod.)</option>
-                            <option value="very_high" {{ old('activity_level') === 'very_high' ? 'selected' : '' }}>Muy Alta (Pesado)</option>
                         </select>
                         <x-input-error :messages="$errors->get('activity_level')" />
                     </div>
