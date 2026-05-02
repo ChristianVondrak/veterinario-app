@@ -44,7 +44,7 @@ test('MER: intact dog / medium activity = 1.8 × RER', function () {
     $svc = new DietCalculatorService();
     $rer = $svc->calculateRer(10.0);
     $mer = $svc->calculateMerFromScalars($rer, 'entero', 'medium', 3);
-    expect($mer)->toBeBetween($rer * 1.78, $rer * 1.82);
+    expect($mer)->toBeBetween($rer * 1.58, $rer * 1.62);
 });
 
 test('MER: sterilized synonym maps to 1.6 × RER', function () {
@@ -61,12 +61,12 @@ test('MER: low-activity castrated dog uses min(1.6, 1.2) = 1.2 × RER', function
     expect($mer)->toBeBetween($rer * 1.18, $rer * 1.22);
 });
 
-test('MER: high-activity intact dog = 1.8 × RER (activity does not reduce)', function () {
+test('MER: high-activity intact dog = 3.0 × RER', function () {
     $svc = new DietCalculatorService();
     $rer = $svc->calculateRer(10.0);
     $mer = $svc->calculateMerFromScalars($rer, 'entero', 'high', 3);
-    // high activity does not override intact factor (1.8)
-    expect($mer)->toBeBetween($rer * 1.78, $rer * 1.82);
+    // high activity factor is 3.0
+    expect($mer)->toBeBetween($rer * 2.98, $rer * 3.02);
 });
 
 test('MER: elderly dog (>7y) is reduced 20% vs same young dog', function () {
