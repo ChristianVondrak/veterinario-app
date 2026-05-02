@@ -362,17 +362,14 @@ class DietCalculatorService
         $kP = $proteinIng->energy_kcal / 100.0;
         $kC = $carbIng->energy_kcal    / 100.0;
         $pP = $proteinIng->protein_g   / 100.0;
-        $pC = $carbIng->protein_g      / 100.0;
         $R_kcal = max(0, $targets['kcal']      - $currentTotals['kcal']);
         $R_prot = max(0, $targets['protein_g'] - $currentTotals['protein_g']);
-        $det = ($kP * $pC) - ($kC * $pP);
-        if (abs($det) > 1e-9) {
-            $proteinGrams = (($R_kcal * $pC) - ($R_prot * $kC)) / $det;
-            $carbGrams    = (($kP * $R_prot) - ($pP * $R_kcal)) / $det;
-        } else {
-            $proteinGrams = ($pP > 0) ? ($R_prot / $pP) : 0;
-            $carbGrams    = ($kC > 0) ? max(0, ($R_kcal - $proteinGrams * $kP) / $kC) : 0;
-        }
+        // Protein-first sequential approach: size protein source by protein need,
+        // then fill remaining calories with carbs. Avoids Cramer's pathological
+        // results with high-fat protein sources (e.g. beef 70-30) where the
+        // simultaneous solver minimises meat and maximises potato.
+        $proteinGrams = ($pP > 0) ? ($R_prot / $pP) : 0;
+        // Enforce HBV floor: at least 60% of total protein from the HBV source.
         if ($pP > 0) {
             $minHbvGrams = ($targets['protein_g'] * 0.60) / $pP;
             if ($proteinGrams < $minHbvGrams) {
@@ -381,11 +378,14 @@ class DietCalculatorService
                     'floor_g'   => round($minHbvGrams, 2),
                 ]);
                 $proteinGrams = $minHbvGrams;
-                $carbGrams = ($kC > 0)
-                    ? max(0, ($R_kcal - $proteinGrams * $kP) / $kC)
-                    : 0;
             }
         }
+        // Guard: if protein source alone overshoots the calorie budget, cap it.
+        if ($kP > 0 && $proteinGrams * $kP > $R_kcal) {
+            $proteinGrams = $R_kcal / $kP;
+        }
+        $remainingKcal = max(0, $R_kcal - $proteinGrams * $kP);
+        $carbGrams     = ($kC > 0) ? ($remainingKcal / $kC) : 0;
         $addIngredient($proteinSrc, max(0, $proteinGrams));
         $addIngredient($carbSrc, max(0, $carbGrams));
         $potassiumRequired = self::nrcValue('potassium_g') * $bwMetabolic * 1000.0;
