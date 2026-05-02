@@ -80,6 +80,7 @@ class DietCalculatorService
             'carb_src'    => 'Papas hervidas sin piel',
             'fiber_src'   => 'Brócoli hervido',
             'calcium_src' => 'Cáscara de huevo en polvo',
+            'fat_src'     => 'Aceite de oliva',
             'supplement'  => 'Aceite de salmón',
         ],
         'dieta_renal_temprana_res' => [
@@ -88,6 +89,7 @@ class DietCalculatorService
             'carb_src'    => 'Papas hervidas sin piel',
             'fiber_src'   => 'Brócoli hervido',
             'calcium_src' => 'Cáscara de huevo en polvo',
+            'fat_src'     => 'Aceite de oliva',
             'supplement'  => 'Aceite de salmón',
         ],
         'dieta_renal_avanzada_pollo' => [
@@ -96,6 +98,7 @@ class DietCalculatorService
             'carb_src'    => 'Papas hervidas sin piel',
             'fiber_src'   => 'Brócoli hervido',
             'calcium_src' => 'Cáscara de huevo en polvo',
+            'fat_src'     => 'Aceite de oliva',
             'supplement'  => 'Aceite de salmón',
         ],
         'dieta_renal_avanzada_res' => [
@@ -104,6 +107,7 @@ class DietCalculatorService
             'carb_src'    => 'Papas hervidas sin piel',
             'fiber_src'   => 'Brócoli hervido',
             'calcium_src' => 'Cáscara de huevo en polvo',
+            'fat_src'     => 'Aceite de oliva',
             'supplement'  => 'Aceite de salmón',
         ],
     ];
@@ -291,14 +295,15 @@ class DietCalculatorService
         $carbSrc    = $recipe['carb_src'];
         $fiberSrc   = $recipe['fiber_src'];
         $calciumSrc = $recipe['calcium_src'];
+        $fatSrc     = $recipe['fat_src'];
         $supplement = $recipe['supplement'];
-        $fiberGrams = 30.0; 
+        $fiberGrams = 30.0;
         $bwMetabolic      = pow($weightKg, 0.75);
         $omega3TargetG    = $targets['omega_3_g'] ?? (self::nrcValue('omega_3_g') * $bwMetabolic);
         $omega3SulG       = self::NRC_TABLE_15_5['omega_3_g']['sul_bw'] * $bwMetabolic;
         $omega3CappedG    = min($omega3TargetG, $omega3SulG);
         $suppGrams        = $omega3CappedG / self::SALMON_OIL_OMEGA3_PER_GRAM;
-        $names         = [$proteinSrc, $carbSrc, $fiberSrc, $calciumSrc, $supplement];
+        $names         = [$proteinSrc, $carbSrc, $fiberSrc, $calciumSrc, $fatSrc, $supplement];
         $dbIngredients = Ingredient::whereIn('name', $names)->get()->keyBy('name');
         foreach ($names as $name) {
             if (! $dbIngredients->has($name)) {
@@ -310,6 +315,7 @@ class DietCalculatorService
         $currentTotals = [
             'kcal'        => 0.0,
             'protein_g'   => 0.0,
+            'fat_g'       => 0.0,
             'calcium_mg'  => 0.0,
             'potassium_mg'=> 0.0,
         ];
@@ -319,6 +325,7 @@ class DietCalculatorService
             $factor = $grams / 100.0;
             $currentTotals['kcal']         += $ing->energy_kcal   * $factor;
             $currentTotals['protein_g']    += $ing->protein_g      * $factor;
+            $currentTotals['fat_g']        += $ing->fat_g          * $factor;
             $currentTotals['calcium_mg']   += $ing->calcium_mg     * $factor;
             $currentTotals['potassium_mg'] += $ing->potassium_mg   * $factor;
             $displayName = $isSupplement ? $name . ' (suplemento)' : $name;
@@ -345,6 +352,11 @@ class DietCalculatorService
             ? ($missingCalciumC / $calciumIng->calcium_mg) * 100.0
             : 0;
         $addIngredient($calciumSrc, $calciumGrams);
+        $fatIng        = $dbIngredients->get($fatSrc);
+        $fatTargetG    = self::nrcValue('fat_g') * $bwMetabolic;
+        $fatNeededG    = max(0, $fatTargetG - $currentTotals['fat_g']);
+        $fatGrams      = ($fatIng->fat_g > 0) ? ($fatNeededG / ($fatIng->fat_g / 100.0)) : 0;
+        $addIngredient($fatSrc, $fatGrams);
         $proteinIng = $dbIngredients->get($proteinSrc);
         $carbIng    = $dbIngredients->get($carbSrc);
         $kP = $proteinIng->energy_kcal / 100.0;

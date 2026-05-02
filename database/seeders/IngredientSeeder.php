@@ -39,6 +39,13 @@ class IngredientSeeder extends Seeder
             // ================= GRASAS Y ACEITES =================
             [
                 'category' => 'GRASAS Y ACEITES',
+                'name' => 'Aceite de oliva',
+                'water_g' => 0, 'energy_kcal' => 884, 'protein_g' => 0, 'fat_g' => 100, 'carbohydrate_g' => 0, 'fiber_g' => 0, 'omega_3_g' => 0,
+                'calcium_mg' => 1, 'iron_mg' => 0.56, 'magnesium_mg' => 0, 'phosphorus_mg' => 1, 'potassium_mg' => 2, 'ca_p_ratio' => 1.0, 'sodium_mg' => 0, 'zinc_mg' => 0, 'copper_mg' => 0, 'manganese_mg' => 0, 'selenium_mcg' => 0,
+                'vit_c_mg' => 0, 'thiamin_mg' => 0, 'riboflavin_mg' => 0, 'niacin_mg' => 0, 'pantothenic_acid_mg' => 0, 'vit_b6_mg' => 0, 'folate_mcg' => 0, 'vit_b12_mcg' => 0, 'vit_a_rae' => 0, 'vit_e_mg' => 14.35, 'vit_d_mcg' => 0
+            ],
+            [
+                'category' => 'GRASAS Y ACEITES',
                 'name' => 'Aceite de salmón',
                 'water_g' => 0, 'energy_kcal' => 902, 'protein_g' => 0, 'fat_g' => 100, 'carbohydrate_g' => 0, 'fiber_g' => 0, 'omega_3_g' => 31.5,
                 'calcium_mg' => 0, 'iron_mg' => 0, 'magnesium_mg' => 0, 'phosphorus_mg' => 0, 'potassium_mg' => 0, 'ca_p_ratio' => 0, 'sodium_mg' => 0, 'zinc_mg' => 0, 'copper_mg' => 0, 'manganese_mg' => 0, 'selenium_mcg' => 0,

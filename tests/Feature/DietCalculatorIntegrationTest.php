@@ -91,7 +91,12 @@ function seedTestIngredients(): void
          'phosphorus_mg' => 0,   'potassium_mg' => 0,   'calcium_mg' => 0,  'sodium_mg' => 0,
          'omega_3_g' => 31.5, 'water_g' => 0],
 
-                ['name' => 'Cáscara de huevo en polvo', 'category' => 'SUPLEMENTOS',
+        ['name' => 'Aceite de oliva', 'category' => 'GRASAS Y ACEITES',
+         'energy_kcal' => 884,  'protein_g' => 0,      'fat_g' => 100,   'carbohydrate_g' => 0,
+         'phosphorus_mg' => 1,   'potassium_mg' => 2,   'calcium_mg' => 1,  'sodium_mg' => 0,
+         'omega_3_g' => 0, 'water_g' => 0],
+
+        ['name' => 'Cáscara de huevo en polvo', 'category' => 'SUPLEMENTOS',
          'energy_kcal' => 0,   'protein_g' => 0,     'fat_g' => 0,     'carbohydrate_g' => 0,
          'phosphorus_mg' => 10, 'potassium_mg' => 10, 'calcium_mg' => 38000, 'sodium_mg' => 10,
          'omega_3_g' => 0, 'water_g' => 1.0],
