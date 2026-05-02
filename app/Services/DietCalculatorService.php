@@ -584,6 +584,16 @@ class DietCalculatorService
                 $pct >= 60   => 'MODERADO',
                 default      => 'CRÍTICO',
             };
+            if ($label === 'Fósforo (mg)' && $estado !== 'EXCESO') {
+                // En dietas renales, la restricción de fósforo es el objetivo principal.
+                // Estar por debajo del requerimiento de un perro sano NO es deficiencia, es el éxito del tratamiento.
+                $estado = match(true) {
+                    $pct >= 25 => 'ADECUADO', // 25%-100% es restricción ideal
+                    $pct >= 15 => 'LEVE',
+                    $pct >= 10 => 'MODERADO',
+                    default    => 'CRÍTICO',
+                };
+            }
             if ($label === 'Sodio (mg)' && $estado !== 'EXCESO') {
                 $pctVsMinimal = $sodioMinimal > 0
                     ? round(($aporte / $sodioMinimal) * 100, 1)
