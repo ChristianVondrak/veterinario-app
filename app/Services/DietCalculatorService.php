@@ -297,7 +297,9 @@ class DietCalculatorService
         $calciumSrc = $recipe['calcium_src'];
         $fatSrc     = $recipe['fat_src'];
         $supplement = $recipe['supplement'];
-        $fiberGrams = 30.0;
+        // La fibra (vegetales) debe escalar con el tamaño/requerimiento del perro.
+        // Una regla estándar en dietas caseras es ~10g de vegetales por cada 100 kcal de MER.
+        $fiberGrams = ($targets['kcal'] / 100.0) * 10.0;
         $bwMetabolic      = pow($weightKg, 0.75);
         $omega3TargetG    = $targets['omega_3_g'] ?? (self::nrcValue('omega_3_g') * $bwMetabolic);
         $omega3SulG       = self::NRC_TABLE_15_5['omega_3_g']['sul_bw'] * $bwMetabolic;
