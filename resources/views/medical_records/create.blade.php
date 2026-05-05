@@ -126,8 +126,10 @@
                         <select id="physiological_status" name="physiological_status" required
                                 class="block w-full rounded-lg border-slate-300 bg-white text-slate-900 shadow-sm focus:border-teal-500 focus:ring-teal-500 transition">
                             <option value="normal" {{ old('physiological_status', 'normal') === 'normal' ? 'selected' : '' }}>Adulto Normal</option>
-                            <option value="gestation" {{ old('physiological_status') === 'gestation' ? 'selected' : '' }}>Gestación (Últ. tercio)</option>
-                            <option value="lactation" {{ old('physiological_status') === 'lactation' ? 'selected' : '' }}>Lactancia</option>
+                            @if($patient->sex !== 'male')
+                                <option value="gestation" {{ old('physiological_status') === 'gestation' ? 'selected' : '' }}>Gestación (Últ. tercio)</option>
+                                <option value="lactation" {{ old('physiological_status') === 'lactation' ? 'selected' : '' }}>Lactancia</option>
+                            @endif
                             <option value="growth" {{ old('physiological_status') === 'growth' ? 'selected' : '' }}>Crecimiento</option>
                             <option value="weight_loss" {{ old('physiological_status') === 'weight_loss' ? 'selected' : '' }}>Pérdida de Peso</option>
                             <option value="weight_gain" {{ old('physiological_status') === 'weight_gain' ? 'selected' : '' }}>Ganancia de Peso</option>
