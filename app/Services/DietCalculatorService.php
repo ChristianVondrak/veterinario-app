@@ -172,28 +172,32 @@ class DietCalculatorService
         $physio   = strtolower($physiologicalStatus);
         $activity = strtolower($activityLevel);
         $status   = strtolower($reproductiveStatus);
+        $isNeutered = str_contains($status, 'neutered') || str_contains($status, 'castrat')
+                      || str_contains($status, 'castrad') || str_contains($status, 'esteriliz');
+
+        // Estado fisiológico especial: aplica el factor directamente sobre RER y termina.
+        // El peso como objetivo (weight_loss, weight_gain) también se calcula directo sobre RER.
         $physiologicalFactor = match($physio) {
-            'gestation'    => 3.0,   
-            'lactation'    => 4.0,   
-            'growth'       => $ageMonths < 4 ? 3.0 : 2.0, 
-            'weight_loss'  => 1.0,   
-            'critical_care'=> 1.0,   
-            'weight_gain'  => 1.5,   
-            default        => null,  
+            'gestation'     => 3.0,
+            'lactation'     => 4.0,
+            'weight_loss'   => 1.0,
+            'weight_gain'   => 1.8,
+            'critical_care' => 1.0,
+            default         => null,
         };
         if ($physiologicalFactor !== null) {
             return round($rer * $physiologicalFactor, 2);
         }
+        // Estado "Adulto Normal": aplica factor por nivel de actividad,
+        // diferenciando entero vs castrado en actividad baja y media.
         $factor = match($activity) {
-            'low'       => str_contains($status, 'neutered') || str_contains($status, 'castrat')
-                            || str_contains($status, 'castrad') || str_contains($status, 'esteriliz')
-                            ? 1.2 : 1.4,
-            'medium'    => 1.6,
-            'high'      => 3.0,      
-            'very_high' => 3.0,      
-            default     => 1.6,
+            'low'    => $isNeutered ? 1.2 : 1.4,
+            'medium' => $isNeutered ? 1.6 : 1.8,
+            'high'   => 2.0,
+            default  => $isNeutered ? 1.6 : 1.8,
         };
         $mer = $rer * $factor;
+        // Ajuste por edad avanzada (> 7 años): -20%
         if ($ageYears > 7) {
             $mer *= 0.80;
         }

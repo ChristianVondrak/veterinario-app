@@ -49,7 +49,7 @@ class MedicalRecordController extends Controller
             'activity_level' => ['required', Rule::in(['low', 'medium', 'high'])],
             'physiological_status' => [
                 'nullable',
-                Rule::in(['normal', 'gestation', 'lactation', 'growth', 'weight_loss', 'weight_gain', 'critical_care']),
+                Rule::in(['normal', 'gestation', 'lactation', 'weight_loss', 'weight_gain', 'critical_care']),
                 function ($attribute, $value, $fail) use ($patient) {
                     if ($patient->sex === 'male' && in_array($value, ['gestation', 'lactation'])) {
                         $fail('Un paciente macho no puede estar en gestación ni lactancia.');

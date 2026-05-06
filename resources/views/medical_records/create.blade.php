@@ -130,7 +130,6 @@
                                 <option value="gestation" {{ old('physiological_status') === 'gestation' ? 'selected' : '' }}>Gestación (Últ. tercio)</option>
                                 <option value="lactation" {{ old('physiological_status') === 'lactation' ? 'selected' : '' }}>Lactancia</option>
                             @endif
-                            <option value="growth" {{ old('physiological_status') === 'growth' ? 'selected' : '' }}>Crecimiento</option>
                             <option value="weight_loss" {{ old('physiological_status') === 'weight_loss' ? 'selected' : '' }}>Pérdida de Peso</option>
                             <option value="weight_gain" {{ old('physiological_status') === 'weight_gain' ? 'selected' : '' }}>Ganancia de Peso</option>
                             <option value="critical_care" {{ old('physiological_status') === 'critical_care' ? 'selected' : '' }}>Cuidados Críticos</option>
