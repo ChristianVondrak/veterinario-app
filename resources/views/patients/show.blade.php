@@ -314,9 +314,13 @@
                         <p class="text-sm text-slate-500 mt-1">Usa el botón "Generar Dieta con IA" para crear la primera propuesta nutricional.</p>
                     </div>
                 @else
+                    @php
+                        $totalDietsCount = $patient->diets()->count();
+                    @endphp
                     <div class="space-y-3" x-data="{ open: 0 }">
                         @foreach ($diets as $i => $diet)
                             @php
+                                $dietNumber = $totalDietsCount - $i;
                                 $c       = $diet->content ?? [];
                                 $justif  = $c['justificacion_clinica'] ?? ($c['description'] ?? null);
                                 $ingreds = is_array($c['ingredientes'] ?? null) ? $c['ingredientes'] : [];
@@ -345,11 +349,11 @@
                                     class="w-full flex items-center justify-between px-5 py-4 bg-slate-50 hover:bg-slate-100/70 transition text-left gap-3">
                                     <div class="flex items-center gap-3 min-w-0">
                                         <span class="flex-shrink-0 w-7 h-7 rounded-full bg-indigo-600 text-white text-xs font-bold flex items-center justify-center">
-                                            {{ $i + 1 }}
+                                            {{ $dietNumber }}
                                         </span>
                                         <div class="min-w-0">
                                             @php
-                                                $dietTitle = 'Dieta ' . ($i + 1) . ' - ' . $patient->name . ' - (' . ($diet->created_at?->format('d/m/y') ?? '') . ')';
+                                                $dietTitle = 'Dieta ' . $dietNumber . ' - ' . $patient->name . ' - (' . ($diet->created_at?->format('d/m/y') ?? '') . ')';
                                             @endphp
                                             <p class="text-sm font-semibold text-slate-900 truncate">{{ $dietTitle }}</p>
                                             <p class="text-xs text-slate-500 mt-0.5 flex flex-wrap items-center gap-2">
