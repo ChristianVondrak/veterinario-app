@@ -349,18 +349,20 @@
                                         </span>
                                         <div class="min-w-0">
                                             @php
-                                                $dietTitle = ($recipe ?? 'Dieta Renal')
-                                                    . ' — '
-                                                    . ($diet->created_at?->format('d/m/Y') ?? '');
+                                                $dietTitle = 'Dieta ' . ($i + 1) . ' - ' . $patient->name . ' - (' . ($diet->created_at?->format('d/m/y') ?? '') . ')';
                                             @endphp
                                             <p class="text-sm font-semibold text-slate-900 truncate">{{ $dietTitle }}</p>
                                             <p class="text-xs text-slate-500 mt-0.5 flex flex-wrap items-center gap-2">
                                                 <span>{{ $diet->created_at?->format('d/m/Y H:i') }}</span>
-                                                @if ($recipe)
-                                                    <span class="px-2 py-0.5 rounded-full bg-teal-100 text-teal-700 font-medium">🍽 {{ $recipe }}</span>
+                                                @if (isset($aporte['kcal']))
+                                                    <span class="px-2 py-0.5 rounded-full bg-teal-100 text-teal-700 font-medium" title="Aporte calórico real de los ingredientes">
+                                                        🍽 Dieta: {{ number_format($aporte['kcal'], 0) }} kcal
+                                                    </span>
                                                 @endif
                                                 @if ($mer)
-                                                    <span class="px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 font-medium">⚡ {{ $mer }} kcal/día</span>
+                                                    <span class="px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 font-medium" title="Requerimiento Energético de Mantenimiento del paciente">
+                                                        ⚡ Paciente (MER): {{ $mer }} kcal
+                                                    </span>
                                                 @endif
                                             </p>
                                         </div>
