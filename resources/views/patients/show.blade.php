@@ -427,12 +427,13 @@
                                             <p class="text-xs uppercase tracking-wide text-slate-500 font-semibold mb-3">Aporte Nutricional Total</p>
                                             <div class="flex flex-wrap gap-2">
                                                 @foreach ([
-                                                    'Proteína'  => [$aporte['protein_g']      ?? null, 'g',  'bg-blue-50 text-blue-700'],
-                                                    'Grasa'     => [$aporte['fat_g']           ?? null, 'g',  'bg-orange-50 text-orange-700'],
-                                                    'Fósforo'   => [$aporte['phosphorus_mg']   ?? null, 'mg', 'bg-purple-50 text-purple-700'],
-                                                    'Potasio'   => [$aporte['potassium_mg']    ?? null, 'mg', 'bg-teal-50 text-teal-700'],
-                                                    'Omega-3'   => [isset($aporte['omega_3_g']) ? round($aporte['omega_3_g'] * 1000) : null, 'mg', 'bg-cyan-50 text-cyan-700'],
-                                                    'Agua'      => [$aporte['water_g']         ?? null, 'g',  'bg-slate-100 text-slate-600'],
+                                                    'Proteína'      => [$aporte['protein_g']      ?? null, 'g',  'bg-blue-50 text-blue-700'],
+                                                    'Grasa'         => [$aporte['fat_g']           ?? null, 'g',  'bg-orange-50 text-orange-700'],
+                                                    'Carbohidratos' => [$aporte['carbohydrate_g']  ?? null, 'g',  'bg-yellow-50 text-yellow-700'],
+                                                    'Fósforo'       => [$aporte['phosphorus_mg']   ?? null, 'mg', 'bg-purple-50 text-purple-700'],
+                                                    'Potasio'       => [$aporte['potassium_mg']    ?? null, 'mg', 'bg-teal-50 text-teal-700'],
+                                                    'Omega-3'       => [isset($aporte['omega_3_g']) ? round($aporte['omega_3_g'] * 1000) : null, 'mg', 'bg-cyan-50 text-cyan-700'],
+                                                    'Agua'          => [$aporte['water_g']         ?? null, 'g',  'bg-slate-100 text-slate-600'],
                                                 ] as $label => [$val, $unit, $cls])
                                                     @if ($val !== null)
                                                         <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold {{ $cls }}">
