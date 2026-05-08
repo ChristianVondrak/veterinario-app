@@ -400,7 +400,23 @@
                                     @if (!empty($alertas))
                                         <div class="px-5 py-4 bg-amber-50/60 space-y-1.5">
                                             @foreach ($alertas as $alerta)
-                                                <p class="text-xs text-amber-800 leading-relaxed">{{ $alerta }}</p>
+                                                @php
+                                                    if (str_starts_with($alerta, '[OK]')) {
+                                                        $badge = ['OK', 'bg-emerald-100 text-emerald-700', substr($alerta, 5)];
+                                                    } elseif (str_starts_with($alerta, '[INFO]')) {
+                                                        $badge = ['INFO', 'bg-blue-100 text-blue-700', substr($alerta, 7)];
+                                                    } elseif (str_starts_with($alerta, '[!]')) {
+                                                        $badge = ['!', 'bg-red-100 text-red-700', substr($alerta, 4)];
+                                                    } elseif (preg_match('/^\[IRIS [IVX]+\]/', $alerta, $m)) {
+                                                        $badge = [trim($m[0], '[]'), 'bg-amber-100 text-amber-800', ltrim(substr($alerta, strlen($m[0])))];
+                                                    } else {
+                                                        $badge = ['—', 'bg-slate-100 text-slate-600', $alerta];
+                                                    }
+                                                @endphp
+                                                <p class="text-xs text-amber-900 leading-relaxed flex items-start gap-2">
+                                                    <span class="flex-shrink-0 inline-block px-1.5 py-0.5 rounded text-xs font-bold {{ $badge[1] }}">{{ $badge[0] }}</span>
+                                                    <span>{{ trim($badge[2]) }}</span>
+                                                </p>
                                             @endforeach
                                         </div>
                                     @endif

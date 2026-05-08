@@ -4,11 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Models\Diet;
 use App\Models\Patient;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Str;
-use Spatie\LaravelPdf\Facades\Pdf;
 
 /**
  * Controller responsible for generating and downloading PDF reports of patient diets.
+ *
+ * Uses DomPDF (pure PHP) to ensure compatibility with cloud environments
+ * like Laravel Cloud that do not support binary dependencies such as Chrome/Chromium.
  */
 class DietPdfController extends Controller
 {
@@ -17,7 +20,7 @@ class DietPdfController extends Controller
      *
      * @param  Patient  $patient  The patient model.
      * @param  Diet  $diet  The diet model.
-     * @return \Spatie\LaravelPdf\PdfBuilder
+     * @return \Illuminate\Http\Response
      */
     public function download(Patient $patient, Diet $diet)
     {
@@ -28,11 +31,11 @@ class DietPdfController extends Controller
 
         $filename = 'Dieta_'.Str::slug($patient->name).'_'.$diet->created_at->format('Y_m_d').'.pdf';
 
-        return Pdf::view('pdf.diet', [
+        $pdf = Pdf::loadView('pdf.diet', [
             'patient' => $patient,
             'diet' => $diet,
-        ])
-            ->format('a4')
-            ->name($filename);
+        ])->setPaper('a4', 'portrait');
+
+        return $pdf->download($filename);
     }
 }

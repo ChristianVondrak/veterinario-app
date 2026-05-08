@@ -681,20 +681,20 @@ class DietCalculatorService
             $limit = self::IRIS_PHOSPHORUS_LIMITS[$iris] ?? 6.0;
             $pSuero = (float) $record->phosphorus;
             if ($pSuero > $limit) {
-                $alerts[] = "⚠️ IRIS {$iris}: Fósforo sérico ({$pSuero} mg/dL) supera el límite recomendado ({$limit} mg/dL). Considere quelantes de fósforo.";
+                $alerts[] = "[IRIS {$iris}] Fosforo serico ({$pSuero} mg/dL) supera el limite recomendado ({$limit} mg/dL). Considere quelantes de fosforo.";
             }
         }
         if ($record->potassium !== null && (float) $record->potassium < 4.0) {
-            $alerts[] = "⚠️ Hipopotasemia: Potasio sérico ({$record->potassium} mmol/L) < 4.0 mmol/L. Se recomienda suplementación de potasio.";
+            $alerts[] = "[!] Hipopotasemia: Potasio serico ({$record->potassium} mmol/L) < 4.0 mmol/L. Se recomienda suplementacion de potasio.";
         }
         if ($record->potassium !== null && (float) $record->potassium > 5.3) {
-            $alerts[] = "⚠️ Hiperpotasemia: Potasio sérico ({$record->potassium} mmol/L) > 5.3 mmol/L. Se requiere una dieta con restricción de potasio. Morbilidad asociada: 41%.";
+            $alerts[] = "[!] Hiperpotasemia: Potasio serico ({$record->potassium} mmol/L) > 5.3 mmol/L. Se requiere una dieta con restriccion de potasio. Morbilidad asociada: 41%.";
         }
         if ($record->bicarbonate !== null && (float) $record->bicarbonate < 18.0) {
-            $alerts[] = "⚠️ Acidosis metabólica: Bicarbonato sérico ({$record->bicarbonate} mmol/L) < 18 mmol/L (normal: 18–24 mmol/L). Se recomienda implementar terapia de alcalinización.";
+            $alerts[] = "[!] Acidosis metabolica: Bicarbonato serico ({$record->bicarbonate} mmol/L) < 18 mmol/L (normal: 18-24 mmol/L). Se recomienda implementar terapia de alcalinizacion.";
         }
         if (in_array($iris, ['III', 'IV'])) {
-            $alerts[] = "ℹ️ IRIS {$iris}: Se aplicó restricción proteica controlada (−20% del NRC) para reducir azotemia. Monitorear signos de malnutrición.";
+            $alerts[] = "[IRIS {$iris}] Se aplico restriccion proteica controlada (-20% del NRC) para reducir azotemia. Monitorear signos de malnutricion.";
         }
         if (! empty($scaled)) {
             $totalFoodGrams = array_sum(array_column($scaled, 'grams'));
@@ -702,19 +702,19 @@ class DietCalculatorService
                 $porcentajeHumedad = ($nutrients['water_g'] / $totalFoodGrams) * 100.0;
                 if ($porcentajeHumedad < 70.0) {
                     $alerts[] = sprintf(
-                        '⚠️ Humedad baja: La dieta actual aporta %.1f%% de humedad (mínimo recomendado: 70%%). '
-                        .'Se sugiere añadir agua o caldos sin sal en la preparación.',
+                        '[!] Humedad baja: La dieta actual aporta %.1f%% de humedad (minimo recomendado: 70%%). '
+                        .'Se sugiere anadir agua o caldos sin sal en la preparacion.',
                         $porcentajeHumedad
                     );
                 } else {
                     $alerts[] = sprintf(
-                        '✅ Humedad adecuada: La dieta aporta %.1f%% de humedad, superando el umbral del 70%% recomendado para pacientes renales.',
+                        '[OK] Humedad adecuada: La dieta aporta %.1f%% de humedad, superando el umbral del 70%% recomendado para pacientes renales.',
                         $porcentajeHumedad
                     );
                 }
             }
         }
-        $alerts[] = 'ℹ️ Aceite de salmón incluido como suplemento calculado por peso metabólico (NRC Omega-3 EPA+DHA recomendado) para aporte renoprotector ajustado al paciente.';
+        $alerts[] = '[INFO] Aceite de salmon incluido como suplemento calculado por peso metabolico (NRC Omega-3 EPA+DHA recomendado) para aporte renoprotector ajustado al paciente.';
 
         return $alerts;
     }
