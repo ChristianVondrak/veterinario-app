@@ -12,12 +12,12 @@ class PatientFactory extends Factory
     public function definition(): array
     {
         return [
-            'name'                => $this->faker->firstName(),
-            'species'             => 'canino',
-            'breed'               => 'Mestizo',
-            'sex'                 => $this->faker->randomElement(['male', 'female']),
+            'name' => $this->faker->firstName(),
+            'species' => 'canino',
+            'breed' => 'Mestizo',
+            'sex' => $this->faker->randomElement(['male', 'female']),
             'reproductive_status' => 'castrada',
-            'birth_date'          => $this->faker->dateTimeBetween('-8 years', '-1 year')->format('Y-m-d'),
+            'birth_date' => $this->faker->dateTimeBetween('-8 years', '-1 year')->format('Y-m-d'),
         ];
     }
 }

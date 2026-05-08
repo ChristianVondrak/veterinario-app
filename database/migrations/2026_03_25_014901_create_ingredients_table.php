@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->string('name')->unique();
             $table->string('category')->index();
-            
+
             // Macronutrientes y Generales
             $table->decimal('water_g', 8, 2)->default(0);
             $table->decimal('energy_kcal', 8, 2)->default(0);
@@ -21,7 +21,7 @@ return new class extends Migration
             $table->decimal('carbohydrate_g', 8, 2)->default(0);
             $table->decimal('fiber_g', 8, 2)->default(0);
             $table->decimal('omega_3_g', 8, 2)->default(0); // EPA+DHA
-            
+
             // Minerales
             $table->decimal('calcium_mg', 8, 2)->default(0);
             $table->decimal('iron_mg', 8, 2)->default(0);
@@ -34,7 +34,7 @@ return new class extends Migration
             $table->decimal('copper_mg', 8, 3)->default(0);
             $table->decimal('manganese_mg', 8, 3)->default(0);
             $table->decimal('selenium_mcg', 8, 2)->default(0);
-            
+
             // Vitaminas
             $table->decimal('vit_c_mg', 8, 2)->default(0);
             $table->decimal('thiamin_mg', 8, 3)->default(0);

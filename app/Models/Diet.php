@@ -25,4 +25,3 @@ class Diet extends Model
         return $this->belongsTo(Patient::class);
     }
 }
-

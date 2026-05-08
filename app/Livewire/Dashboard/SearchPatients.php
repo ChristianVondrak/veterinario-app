@@ -35,4 +35,3 @@ class SearchPatients extends Component
         ]);
     }
 }
-

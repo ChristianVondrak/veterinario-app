@@ -9,8 +9,14 @@ use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
+/**
+ * Controller responsible for managing patient records.
+ */
 class PatientController extends Controller
 {
+    /**
+     * Display a paginated list of patients.
+     */
     public function index(): View
     {
         $patients = Patient::query()
@@ -22,11 +28,17 @@ class PatientController extends Controller
         ]);
     }
 
+    /**
+     * Show the form for creating a new patient.
+     */
     public function create(): View
     {
         return view('patients.create');
     }
 
+    /**
+     * Display the specified patient along with their medical records and diets.
+     */
     public function show(Patient $patient): View
     {
         $patient->load([
@@ -39,6 +51,9 @@ class PatientController extends Controller
         ]);
     }
 
+    /**
+     * Store a newly created patient in the database.
+     */
     public function store(StorePatientRequest $request): RedirectResponse
     {
         $data = $request->validated();
@@ -46,11 +61,11 @@ class PatientController extends Controller
         $ageYears = (int) $data['age_years'];
         unset($data['age_years']);
 
-        // Guardamos siempre como perro por defecto.
+        // Default to dog species
         $data['species'] = 'dog';
 
-        // Calcula la fecha de nacimiento restando años desde hoy.
-        // Nota: al ser un date, usamos el inicio del día para consistencia.
+        // Calculate birth date by subtracting years from today.
+        // Note: as a date column, we use start of day for consistency.
         $data['birth_date'] = Carbon::today()->subYears($ageYears);
 
         Patient::create($data);
@@ -60,6 +75,9 @@ class PatientController extends Controller
             ->with('status', 'Paciente registrado correctamente.');
     }
 
+    /**
+     * Show the form for editing the specified patient.
+     */
     public function edit(Patient $patient): View
     {
         $ageYears = $patient->birth_date
@@ -72,6 +90,9 @@ class PatientController extends Controller
         ]);
     }
 
+    /**
+     * Update the specified patient in the database.
+     */
     public function update(UpdatePatientRequest $request, Patient $patient): RedirectResponse
     {
         $data = $request->validated();
@@ -79,12 +100,12 @@ class PatientController extends Controller
         $ageYears = (int) $data['age_years'];
         unset($data['age_years']);
 
-        // Mantener especie como perro por defecto.
-        $data['species']    = 'dog';
+        // Keep species as dog by default.
+        $data['species'] = 'dog';
         $data['birth_date'] = Carbon::today()->subYears($ageYears);
 
-        // Usamos fill+save para actualizar solo los campos del modelo
-        // sin afectar las relaciones (medical_records, diets).
+        // We use fill+save to update only the model attributes
+        // without affecting the relationships (medical_records, diets).
         $patient->fill($data)->save();
 
         return redirect()
@@ -92,6 +113,9 @@ class PatientController extends Controller
             ->with('status', 'Datos del paciente actualizados correctamente.');
     }
 
+    /**
+     * Remove the specified patient from the database.
+     */
     public function destroy(Patient $patient): RedirectResponse
     {
         $patient->delete();
@@ -101,4 +125,3 @@ class PatientController extends Controller
             ->with('status', 'Paciente eliminado correctamente.');
     }
 }
-

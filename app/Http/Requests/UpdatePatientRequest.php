@@ -31,9 +31,8 @@ class UpdatePatientRequest extends FormRequest
             'reproductive_status.in' => 'El estado reproductivo debe ser entero o esterilizado.',
             'age_years.required' => 'La edad es obligatoria.',
             'age_years.integer' => 'La edad debe ser un número entero.',
-            'age_years.min'     => 'La edad mínima es 1 año. No se registran pacientes menores de 1 año.',
-            'age_years.max'     => 'La edad máxima es 30 años.',
+            'age_years.min' => 'La edad mínima es 1 año. No se registran pacientes menores de 1 año.',
+            'age_years.max' => 'La edad máxima es 30 años.',
         ];
     }
 }
-

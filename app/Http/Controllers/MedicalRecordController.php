@@ -9,8 +9,14 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
+/**
+ * Controller responsible for managing patient medical records.
+ */
 class MedicalRecordController extends Controller
 {
+    /**
+     * Show the form for creating a new medical record for the given patient.
+     */
     public function create(Patient $patient): View
     {
         return view('medical_records.create', [
@@ -18,6 +24,9 @@ class MedicalRecordController extends Controller
         ]);
     }
 
+    /**
+     * Display the specified medical record.
+     */
     public function show(Patient $patient, MedicalRecord $medical_record): View
     {
         abort_if($medical_record->patient_id !== $patient->id, 404);
@@ -28,6 +37,9 @@ class MedicalRecordController extends Controller
         ]);
     }
 
+    /**
+     * Store a newly created medical record for the specified patient.
+     */
     public function store(Request $request, Patient $patient): RedirectResponse
     {
         $validated = $request->validate([
@@ -59,9 +71,9 @@ class MedicalRecordController extends Controller
 
             'special_considerations' => ['nullable', 'string'],
         ], [
-            'bcs.between'          => 'La condición corporal (BCS) debe estar entre 1 y 5.',
-            'urine_density.regex'  => 'La densidad urinaria debe tener el formato exacto de 3 decimales (ej. 1.025) y estar entre 1.000 y 1.100.',
-            'activity_level.in'   => 'El nivel de actividad no es válido.',
+            'bcs.between' => 'La condición corporal (BCS) debe estar entre 1 y 5.',
+            'urine_density.regex' => 'La densidad urinaria debe tener el formato exacto de 3 decimales (ej. 1.025) y estar entre 1.000 y 1.100.',
+            'activity_level.in' => 'El nivel de actividad no es válido.',
         ]);
 
         $patient->medicalRecords()->create($validated);
@@ -71,4 +83,3 @@ class MedicalRecordController extends Controller
             ->with('status', "Historia médica registrada para {$patient->name}.");
     }
 }
-

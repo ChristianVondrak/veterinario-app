@@ -341,13 +341,11 @@
                                 ];
                             @endphp
 
-                            <div class="border border-slate-200 rounded-xl overflow-hidden transition-shadow hover:shadow-md">
+                            <div class="border border-slate-200 rounded-xl overflow-hidden transition-shadow hover:shadow-md bg-white" id="diet-card-{{ $i }}">
 
                                 {{-- Accordion header --}}
-                                <button type="button"
-                                    @click="open = (open === {{ $i }}) ? null : {{ $i }}"
-                                    class="w-full flex items-center justify-between px-5 py-4 bg-slate-50 hover:bg-slate-100/70 transition text-left gap-3">
-                                    <div class="flex items-center gap-3 min-w-0">
+                                <div class="w-full flex flex-col sm:flex-row sm:items-center justify-between px-5 py-4 bg-slate-50 transition gap-3">
+                                    <div class="flex-1 flex items-center gap-3 min-w-0 cursor-pointer hover:opacity-80" @click="open = (open === {{ $i }}) ? null : {{ $i }}">
                                         <span class="flex-shrink-0 w-7 h-7 rounded-full bg-indigo-600 text-white text-xs font-bold flex items-center justify-center">
                                             {{ $dietNumber }}
                                         </span>
@@ -371,12 +369,22 @@
                                             </p>
                                         </div>
                                     </div>
-                                    <svg class="w-5 h-5 text-slate-400 flex-shrink-0 transition-transform duration-200"
-                                        :class="open === {{ $i }} ? 'rotate-180' : ''"
-                                        fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                    </svg>
-                                </button>
+                                    <div class="flex items-center justify-between sm:justify-end gap-4 sm:flex-shrink-0 pl-10 sm:pl-0">
+                                        <a href="{{ route('patients.diets.pdf', [$patient, $diet]) }}" 
+                                           target="_blank"
+                                           class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-indigo-700 bg-indigo-100 hover:bg-indigo-200 rounded-lg transition-colors shadow-sm">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                                            Descargar PDF
+                                        </a>
+                                        <button type="button" @click="open = (open === {{ $i }}) ? null : {{ $i }}" class="p-1 rounded hover:bg-slate-200 transition-colors">
+                                            <svg class="w-5 h-5 text-slate-400 transition-transform duration-200"
+                                                :class="open === {{ $i }} ? 'rotate-180' : ''"
+                                                fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
 
                                 {{-- Accordion body --}}
                                 <div x-show="open === {{ $i }}"
@@ -385,6 +393,8 @@
                                     x-transition:enter-end="opacity-100"
                                     @if ($i !== 0) style="display:none" @endif
                                     class="divide-y divide-slate-100">
+
+
 
                                     {{-- IRIS alerts --}}
                                     @if (!empty($alertas))
@@ -546,4 +556,5 @@
             </div>
         </section>
     </div>
+
 </x-app-layout>

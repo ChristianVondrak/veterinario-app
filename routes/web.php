@@ -2,9 +2,10 @@
 
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DietGeneratorController;
-use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\DietPdfController;
 use App\Http\Controllers\MedicalRecordController;
 use App\Http\Controllers\PatientController;
+use App\Http\Controllers\ProfileController;
 use App\Models\Patient;
 use Illuminate\Support\Facades\Route;
 
@@ -40,6 +41,8 @@ Route::middleware('auth')->group(function () {
     })->name('patients.diet.show');
     Route::post('/patients/{patient}/diet', [DietGeneratorController::class, 'store'])
         ->name('patients.diet.store');
+    Route::get('/patients/{patient}/diets/{diet}/pdf', [DietPdfController::class, 'download'])
+        ->name('patients.diets.pdf');
 });
 
 require __DIR__.'/auth.php';

@@ -12,7 +12,7 @@ return new class extends Migration
             // Bicarbonato sérico – para detectar acidosis metabólica
             // Rango normal: 18–24 mmol/L. Alerta cuando < 18 mmol/L.
             $table->decimal('bicarbonate', 5, 2)->nullable()->after('sodium')
-                  ->comment('Bicarbonato sérico (mmol/L). Normal: 18-24.');
+                ->comment('Bicarbonato sérico (mmol/L). Normal: 18-24.');
 
             // Estado fisiológico específico para cálculo preciso de MER
             // Permite distinguir gestación, lactancia, crecimiento y objetivos terapéuticos.
@@ -25,7 +25,7 @@ return new class extends Migration
                 'weight_gain',   // Ganancia de peso: MER = 1.2–1.8 × RER
                 'critical_care', // Cuidados críticos: MER = 1.0 × RER
             ])->default('normal')->after('activity_level')
-              ->comment('Estado fisiológico para cálculo de MER.');
+                ->comment('Estado fisiológico para cálculo de MER.');
         });
     }
 

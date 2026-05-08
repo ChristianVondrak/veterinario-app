@@ -6,8 +6,18 @@ use App\Models\MedicalRecord;
 use App\Models\Patient;
 use Illuminate\View\View;
 
+/**
+ * Controller responsible for rendering the main application dashboard.
+ */
 class DashboardController extends Controller
 {
+    /**
+     * Handle the incoming request.
+     *
+     * Gathers statistics about patients, critical cases (IRIS III/IV),
+     * recent medical records, and IRIS stage distributions to display
+     * on the dashboard.
+     */
     public function __invoke(): View
     {
         $totalPatients = Patient::count();

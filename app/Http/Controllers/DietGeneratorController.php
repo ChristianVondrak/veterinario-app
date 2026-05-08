@@ -10,12 +10,24 @@ use Gemini\Laravel\Facades\Gemini;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * Controller responsible for generating patient diets using AI and math-based algorithms.
+ */
 class DietGeneratorController extends Controller
 {
     public function __construct(
         private readonly DietCalculatorService $calculator,
     ) {}
 
+    /**
+     * Store a newly generated diet for the specified patient.
+     *
+     * Validates required clinical data, computes mathematical targets,
+     * calls the Gemini API to generate the clinical justification report,
+     * and persists the resulting diet in the database.
+     *
+     * @param  Patient  $patient  The patient model.
+     */
     public function store(Patient $patient): RedirectResponse
     {
         $latestRecord = $patient->medicalRecords()->latest('evaluated_at')->first();
@@ -24,7 +36,7 @@ class DietGeneratorController extends Controller
             return redirect()->route('patients.show', $patient)->with('error', 'El paciente no tiene ninguna evaluación médica. No se puede generar una dieta.');
         }
 
-        // ── Validaciones Clínicas Indispensables (Anti-Null) ────────────────
+        // ── Mandatory Clinical Validations (Anti-Null) ────────────────
         if (empty($latestRecord->weight_kg) || $latestRecord->weight_kg <= 0) {
             return redirect()->route('patients.show', $patient)->with('error', 'Falta el peso del paciente en la evaluación. Es un dato matemático obligatorio para calcular las kilocalorías.');
         }
@@ -37,12 +49,13 @@ class DietGeneratorController extends Controller
             return redirect()->route('patients.show', $patient)->with('error', 'Falta el estado reproductivo (castrado/entero) en el perfil del paciente. Afecta drásticamente el cálculo de calorías.');
         }
 
-        // ── Step 1: PHP makes all the math ────────────────────────────────
+        // ── Step 1: PHP handles all the mathematical calculations ───────────
         try {
             $calculoMatematico = $this->calculator->buildCalculationPayload($patient, $latestRecord);
         } catch (\Throwable $e) {
-            Log::error('DietCalculatorService error: ' . $e->getMessage(), ['exception' => $e]);
-            return redirect()->route('patients.show', $patient)->with('error', 'Error interno al calcular la dieta. ' . $e->getMessage());
+            Log::error('DietCalculatorService error: '.$e->getMessage(), ['exception' => $e]);
+
+            return redirect()->route('patients.show', $patient)->with('error', 'Error interno al calcular la dieta. '.$e->getMessage());
         }
 
         // ── Step 2: Gemini only writes the clinical report ─────────────────
@@ -52,7 +65,7 @@ class DietGeneratorController extends Controller
             $result = Gemini::generativeModel(env('GEMINI_MODEL', 'gemini-2.0-flash'))
                 ->generateContent($prompt);
 
-            $rawResponse  = $result->text();
+            $rawResponse = $result->text();
             $cleanResponse = trim(str_replace(['```json', '```'], '', $rawResponse));
 
             $payload = json_decode($cleanResponse, true, 512, JSON_THROW_ON_ERROR);
@@ -62,13 +75,13 @@ class DietGeneratorController extends Controller
             }
 
             // ── Step 3: Merge math data (source of truth) into the payload ─
-            $payload['ingredientes']     = $calculoMatematico['ingredientes'];
+            $payload['ingredientes'] = $calculoMatematico['ingredientes'];
             $payload['aporte_nutricional'] = $calculoMatematico['aporte_total'];
-            $payload['deficiencias']     = $calculoMatematico['deficiencias'];
-            $payload['alertas_iris']     = $calculoMatematico['alertas_iris'];
-            $payload['recipe_name']      = $calculoMatematico['recipe_name'];
-            $payload['mer_kcal']         = $calculoMatematico['mer_kcal'];
-            $payload['rer_kcal']         = $calculoMatematico['rer_kcal'];
+            $payload['deficiencias'] = $calculoMatematico['deficiencias'];
+            $payload['alertas_iris'] = $calculoMatematico['alertas_iris'];
+            $payload['recipe_name'] = $calculoMatematico['recipe_name'];
+            $payload['mer_kcal'] = $calculoMatematico['mer_kcal'];
+            $payload['rer_kcal'] = $calculoMatematico['rer_kcal'];
 
             $summary = isset($payload['summary']) && is_string($payload['summary']) && $payload['summary'] !== ''
                 ? $payload['summary']
@@ -76,8 +89,8 @@ class DietGeneratorController extends Controller
 
             Diet::create([
                 'patient_id' => $patient->id,
-                'summary'    => $summary,
-                'content'    => $payload,
+                'summary' => $summary,
+                'content' => $payload,
             ]);
 
             return redirect()
@@ -85,7 +98,8 @@ class DietGeneratorController extends Controller
                 ->with('status', 'Dieta generada correctamente.');
 
         } catch (\Throwable $e) {
-            Log::error('DietGeneratorController Gemini error: ' . $e->getMessage(), ['exception' => $e]);
+            Log::error('DietGeneratorController Gemini error: '.$e->getMessage(), ['exception' => $e]);
+
             return redirect()->route('patients.show', $patient)->with('error', 'No se pudo generar el informe clínico con IA. Inténtalo nuevamente.');
         }
     }
@@ -93,26 +107,38 @@ class DietGeneratorController extends Controller
     // ─────────────────────────────────────────────────────────────────────
     // PROMPT – Gemini only writes text, never invents numbers
     // ─────────────────────────────────────────────────────────────────────
+
+    /**
+     * Build the prompt to send to the Gemini AI model.
+     *
+     * Embeds the exact mathematical payload and patient clinical data
+     * to ensure the model focuses purely on drafting the clinical report.
+     *
+     * @param  Patient  $patient  The patient model.
+     * @param  MedicalRecord  $record  The latest medical record.
+     * @param  array  $calculo  The computed mathematical payload.
+     * @return string The generated prompt.
+     */
     private function buildPrompt(Patient $patient, MedicalRecord $record, array $calculo): string
     {
-        $species   = $patient->species ? ucfirst($patient->species) : 'No especificada';
-        $weight    = $record->weight_kg ?? 'N/D';
-        $bcs       = $record->bcs ?? 'N/D';
-        $iris      = $record->iris_stage ?? 'N/D';
+        $species = $patient->species ? ucfirst($patient->species) : 'No especificada';
+        $weight = $record->weight_kg ?? 'N/D';
+        $bcs = $record->bcs ?? 'N/D';
+        $iris = $record->iris_stage ?? 'N/D';
         $creatinine = $record->creatinine ?? 'N/D';
-        $bun       = $record->bun ?? 'N/D';
+        $bun = $record->bun ?? 'N/D';
         $phosphorus = $record->phosphorus ?? 'N/D';
-        $potassium  = $record->potassium ?? 'N/D';
+        $potassium = $record->potassium ?? 'N/D';
 
         $specialConsiderations = $record->special_considerations
-            ? "\nCONSIDERACIONES ESPECIALES:\n" . trim($record->special_considerations)
+            ? "\nCONSIDERACIONES ESPECIALES:\n".trim($record->special_considerations)
             : '';
 
         $calculoJson = json_encode($calculo, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
 
         $alertasText = '';
         if (! empty($calculo['alertas_iris'])) {
-            $alertasText = "\nALERTAS CLÍNICAS DETECTADAS:\n" . implode("\n", $calculo['alertas_iris']);
+            $alertasText = "\nALERTAS CLÍNICAS DETECTADAS:\n".implode("\n", $calculo['alertas_iris']);
         }
 
         return <<<PROMPT

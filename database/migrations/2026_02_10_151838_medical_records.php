@@ -10,10 +10,10 @@ return new class extends Migration
     {
         Schema::create('medical_records', function (Blueprint $table) {
             $table->id();
-            
+
             // Relación con el paciente
             $table->foreignId('patient_id')->constrained('patients')->onDelete('cascade');
-            
+
             // Fecha de la consulta/toma de muestra
             $table->timestamp('evaluated_at')->useCurrent();
 
@@ -31,10 +31,10 @@ return new class extends Migration
             $table->decimal('phosphorus', 5, 2)->nullable(); // mg/dL
             $table->decimal('potassium', 5, 2)->nullable();  // mmol/L
             $table->decimal('sodium', 6, 2)->nullable();     // mmol/L
-            
+
             // Densidad Urinaria (Ej: 1.025) - Usamos 3 decimales de precisión
-            $table->decimal('urine_density', 5, 3)->nullable(); 
-            
+            $table->decimal('urine_density', 5, 3)->nullable();
+
             // Proteinuria
             $table->enum('proteinuria', ['yes', 'no', 'unknown'])->default('unknown');
 

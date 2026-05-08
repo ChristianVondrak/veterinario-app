@@ -10,15 +10,15 @@ return new class extends Migration
     {
         Schema::create('patients', function (Blueprint $table) {
             $table->id();
-            
+
             $table->string('name');
             $table->string('species')->default('dog');
             $table->string('breed')->nullable();
             $table->enum('sex', ['male', 'female']);
             $table->enum('reproductive_status', ['intact', 'neutered']);
-            
-            $table->date('birth_date')->nullable(); 
-            
+
+            $table->date('birth_date')->nullable();
+
             $table->timestamps();
             $table->softDeletes();
         });
