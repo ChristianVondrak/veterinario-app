@@ -14,8 +14,8 @@ El sistema combina **matemática de precisión basada en los requerimientos del 
 
 ## 🛠 Stack Tecnológico
 
-*   **Backend:** PHP 8.2+ / Laravel 11
-*   **Frontend:** Blade / Tailwind CSS / Alpine.js
+*   **Backend:** PHP 8.2+ / Laravel 12
+*   **Frontend:** Blade / Tailwind CSS / Alpine.js 3 / Livewire 4
 *   **Base de Datos:** MySQL 8
 *   **PDF Engine:** Spatie Laravel PDF (Puppeteer / Browsershot)
 *   **IA:** Google Gemini (gemini-2.0-flash)
