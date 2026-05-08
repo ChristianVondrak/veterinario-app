@@ -1,59 +1,114 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# VetNutri AI - Sistema Avanzado de Nutrición Veterinaria
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+VetNutri AI es una plataforma clínica diseñada para médicos veterinarios que automatiza el cálculo, formulación y redacción de planes nutricionales terapéuticos, con un enfoque especializado en dietas renales (IRIS I-IV).
 
-## About Laravel
+El sistema combina **matemática de precisión basada en los requerimientos del NRC (National Research Council)** para calcular aportes nutricionales exactos según el peso metabólico del paciente, y utiliza **Inteligencia Artificial (Google Gemini)** de forma estrictamente controlada para redactar justificaciones clínicas y guías de preparación altamente profesionales.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## 🌟 Características Principales
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+*   **Motor de Cálculo Clínico:** Algoritmo secuencial que formula raciones precisas asegurando mínimos de Alto Valor Biológico (HBV) y límites estrictos de Fósforo, Sodio y Potasio según el estadio IRIS del paciente.
+*   **Ajustes Metabólicos Dinámicos:** Calcula requerimientos energéticos (RER y MER) ajustados por edad (>7 años), estado reproductivo (castrado/entero) y nivel de actividad.
+*   **Reportes PDF Nativos:** Exportación de historiales dietéticos a PDF utilizando motores Chromium headless, garantizando fidelidad gráfica (Tailwind CSS) en documentos listos para entregar al propietario.
+*   **Validación de Deficiencias:** Semáforo nutricional visual (Adecuado, Leve, Moderado, Crítico) que compara el aporte de la receta casera contra las tablas NRC 15-5.
+*   **Redacción Asistida por IA:** Redacción de instrucciones de preparación y justificación nefrológica mediante Gemini AI, restringida por el motor matemático subyacente para evitar alucinaciones numéricas.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## 🛠 Stack Tecnológico
 
-## Learning Laravel
+*   **Backend:** PHP 8.2+ / Laravel 11
+*   **Frontend:** Blade / Tailwind CSS / Alpine.js
+*   **Base de Datos:** MySQL 8
+*   **PDF Engine:** Spatie Laravel PDF (Puppeteer / Browsershot)
+*   **IA:** Google Gemini (gemini-2.0-flash)
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+---
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## 🚀 Guía de Despliegue (Docker Estándar)
 
-## Laravel Sponsors
+Esta guía explica cómo levantar la aplicación utilizando comandos puros de Docker Compose, ideal para entornos donde no se utiliza el wrapper de Laravel Sail.
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### 1. Clonar el Repositorio
 
-### Premium Partners
+```bash
+git clone <url-del-repositorio> veterinario-app
+cd veterinario-app
+```
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+### 2. Configurar Variables de Entorno
 
-## Contributing
+Copia el archivo de ejemplo para crear tu entorno local/producción:
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+```bash
+cp .env.example .env
+```
 
-## Code of Conduct
+Abre el archivo `.env` y asegúrate de configurar las credenciales de base de datos y la API Key de Gemini:
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+```env
+DB_CONNECTION=mysql
+DB_HOST=mysql
+DB_PORT=3306
+DB_DATABASE=veterinario_app
+DB_USERNAME=sail
+DB_PASSWORD=password
 
-## Security Vulnerabilities
+GEMINI_API_KEY=tu_clave_api_aqui
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+### 3. Levantar los Contenedores
 
-## License
+Construye y levanta los servicios definidos en el `compose.yaml` (Aplicación y MySQL) en segundo plano:
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+```bash
+docker compose up -d --build
+```
+
+### 4. Instalar Dependencias de PHP (Composer)
+
+Ejecuta Composer dentro del contenedor de la aplicación (`laravel.test`):
+
+```bash
+docker compose exec laravel.test composer install --no-interaction --optimize-autoloader
+```
+
+### 5. Generar la Clave de la Aplicación
+
+```bash
+docker compose exec laravel.test php artisan key:generate
+```
+
+### 6. Migrar y Poblar la Base de Datos (Seeders)
+
+Este paso es **crítico**, ya que poblará la base de datos con la tabla de ingredientes fundamentales (`IngredientSeeder`):
+
+```bash
+docker compose exec laravel.test php artisan migrate --seed
+```
+
+### 7. Configurar Dependencias del Frontend y PDF (Node.js)
+
+Instala los paquetes NPM y el binario de Chromium necesario para que el sistema de exportación a PDF funcione correctamente dentro del contenedor:
+
+```bash
+# Instalar paquetes NPM
+docker compose exec laravel.test npm install
+
+# Descargar el binario de Chrome Headless para la librería Spatie PDF
+docker compose exec laravel.test npx puppeteer browsers install chrome-headless-shell
+
+# Compilar los assets del frontend (para entorno de producción)
+docker compose exec laravel.test npm run build
+```
+
+*(Nota: Si estás desarrollando localmente, en lugar de `npm run build` puedes ejecutar `docker compose exec laravel.test npm run dev`)*
+
+### 8. Permisos de Almacenamiento
+
+Asegúrate de que los directorios de caché y almacenamiento tengan los permisos correctos:
+
+```bash
+docker compose exec laravel.test chmod -R 775 storage bootstrap/cache
+```
+
+### ✅ ¡Listo!
+
+La aplicación ahora debería estar disponible en [http://localhost](http://localhost) (o el puerto configurado en tu `.env`).
